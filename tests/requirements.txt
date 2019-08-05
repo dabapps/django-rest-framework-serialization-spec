@@ -1,0 +1,11 @@
+coverage==4.2
+django-environ==0.4.0
+django-log-request-id==1.3.2
+dj-database-url==0.4.0
+Django==1.11.17
+djangorestframework==3.5.3
+flake8==3.7.5
+mypy==0.660
+psycopg2==2.7.3.2
+unittest-xml-reporting==2.1.0
+django-zen-queries==1.0.0

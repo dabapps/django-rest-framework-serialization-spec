@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -e
+
+export PATH=env/bin:${PATH}
+export DEBUG=true
+export IN_TEST=true
+
+sh -c '! ./manage.py makemigrations --dry-run --exit' # fail if makemigrations hasn't been run
+
+echo "--------------"
+echo "Running python type checking"
+mypy --ignore-missing-imports --follow-imports=skip --strict-optional  --warn-no-return serialization_spec
+mypy --ignore-missing-imports --follow-imports=skip --strict-optional  --warn-no-return tests
+echo "Ok!"
+
+echo "--------------"
+echo "Running Flake8 linting"
+flake8 tests --ignore=E128,E501 --exclude="migrations,settings,*/wsgi.py"
+flake8 serialization_spec --ignore=E128,E501 --exclude="migrations,settings,*/wsgi.py"
+echo "Ok!"
+
+echo "--------------"
+echo "Running django tests"
+coverage run --source=serialization_spec --omit='*/wsgi.py,*/settings.py,*/migrations/*.py,*__init__*,*/test*.py,' manage.py test $@
+coverage report
+coverage html
+

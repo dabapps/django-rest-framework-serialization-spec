@@ -1,0 +1,32 @@
+# Misc
+.DS_Store
+
+# Vim tmp files
+.*.swp
+
+# Byte-compiled / optimized / DLL files
+__pycache__/*
+
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+/env/*
+/static/build/*
+
+# Unit test / coverage reports
+/coverage/*
+/htmlcov/*
+/.tox/*
+/.hypothesis/*
+
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+
+*.log
+
+.mypy_cache/
