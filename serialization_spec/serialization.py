@@ -81,7 +81,7 @@ def make_serializer_class(model, serialization_spec):
                 key: make_serializer_class(
                     relations[key].related_model,
                     values
-                )(many=relations[key].to_many) if isinstance(values, list) else SerializerLambdaField(impl=lambda instance: values.get_value(instance))
+                )(many=relations[key].to_many) if isinstance(values, list) else SerializerLambdaField(impl=values.get_value)
                 for key, values
                 in [item for each in get_childspecs(serialization_spec) for item in each.items()]
             }
