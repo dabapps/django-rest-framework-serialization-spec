@@ -44,7 +44,12 @@ class SerializerLambdaField(Field):
 
 
 class SerializationSpecPlugin:
-    pass
+    def modify_queryset(self, queryset):
+        return queryset
+
+    # abstract method
+    def get_value(self, instance):
+        raise NotImplementedError
 
 
 def get_fields(serialization_spec):
