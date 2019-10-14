@@ -24,7 +24,7 @@ before_install:
     source setup-pyenv.sh
 
 install:
-  - ./build
+  - ./build.sh
 
 before_script:
   - psql -c 'create database serializationspec;' -U postgres
