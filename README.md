@@ -1,4 +1,4 @@
-𝗘𝗫𝗣𝗘𝗥𝗜𝗠𝗘𝗡𝗧𝗔𝗟
+**EXPERIMENTAL**
 
 [![Build Status](https://travis-ci.com/dabapps/serialization-spec.svg?token=8zR1s286kqp7Z1h1qj91&branch=master)](https://travis-ci.com/dabapps/serialization-spec)
 
