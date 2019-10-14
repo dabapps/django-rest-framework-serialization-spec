@@ -8,7 +8,7 @@ import os
 import sys
 
 
-name = 'serialization-spec'
+name = 'django-rest-framework-serialization-spec'
 package = 'serialization_spec'
 description = 'Specify API endpoint data shape declaratively in a DRF view'
 url = 'https://www.dabapps.com'
