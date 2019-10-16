@@ -1,4 +1,4 @@
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch
 from rest_framework.utils import model_meta
 from rest_framework.fields import Field
 from rest_framework.serializers import ModelSerializer
@@ -148,38 +148,19 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
         return make_serializer_class(self.queryset.model, self.serialization_spec)
 
 
-class SerializationSpecPluginModel(SerializationSpecPlugin):
-    def __init__(self, relation):
-        self.relation = relation
-
-    def get_name(self):
-        return '%s_%s' % (self.relation, self.name)
-
-    def modify_queryset(self, queryset):
-        return queryset.annotate(**{self.get_name(): self.model_function(self.relation)})
-
-    def get_value(self, instance):
-        return getattr(instance, self.get_name())
-
-
-class CountOf(SerializationSpecPluginModel):
-    name = 'count'
-    model_function = Count
-
-
 """
 serialization_spec type should be
 
-    SerializationSpec = List[Union[str, Dict[str, Union[SerializationSpecPluginModel, 'SerializationSpec']]]]
+    SerializationSpec = List[Union[str, Dict[str, Union[SerializationSpecPlugin, 'SerializationSpec']]]]
 
 But recursive types are not yet implemented :(
 So we specify to an (arbitrary) depth of 5
 """
-SerializationSpec = List[Union[str, Dict[str, Union[SerializationSpecPluginModel,
-    List[Union[str, Dict[str, Union[SerializationSpecPluginModel,
-        List[Union[str, Dict[str, Union[SerializationSpecPluginModel,
-            List[Union[str, Dict[str, Union[SerializationSpecPluginModel,
-                List[Union[str, Dict[str, Union[SerializationSpecPluginModel,
+SerializationSpec = List[Union[str, Dict[str, Union[SerializationSpecPlugin,
+    List[Union[str, Dict[str, Union[SerializationSpecPlugin,
+        List[Union[str, Dict[str, Union[SerializationSpecPlugin,
+            List[Union[str, Dict[str, Union[SerializationSpecPlugin,
+                List[Union[str, Dict[str, Union[SerializationSpecPlugin,
                     List]]]]
             ]]]]
         ]]]]
