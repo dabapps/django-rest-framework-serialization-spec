@@ -144,6 +144,7 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
         {'assignees': [
             'id',
             'name',
-            {'classes_count': CountOf('classes')}
+            {'classes_count': CountOf('classes')},
+            'classes',
         ]}
     ]
