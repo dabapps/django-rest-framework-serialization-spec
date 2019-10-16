@@ -44,6 +44,8 @@ class SerializerLambdaField(Field):
 
 
 class SerializationSpecPlugin:
+    """ These methods can access self.key to get the key """
+
     def modify_queryset(self, queryset):
         return queryset
 
@@ -100,6 +102,7 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
         key_path = '__'.join(prefixes + [key])
 
         if isinstance(childspec, SerializationSpecPlugin):
+            childspec.key = key
             queryset = childspec.modify_queryset(queryset)
 
         else:
