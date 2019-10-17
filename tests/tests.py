@@ -256,7 +256,8 @@ class DetailViewTestCase(SerializationSpecTestCase):
             [query['sql'] for query in capture.captured_queries],
             [
                 "SELECT \"tests_assignment\".\"id\", \"tests_assignment\".\"name\" FROM \"tests_assignment\" WHERE \"tests_assignment\".\"id\" = '00000000-0000-0000-0000-000000000020'::uuid",
-                "SELECT (\"tests_assignmentstudent\".\"assignment_id\") AS \"_prefetch_related_val_assignment_id\", \"tests_student\".\"id\", \"tests_student\".\"name\", COUNT(\"tests_student_classes\".\"class_id\") AS \"classes_count\" FROM \"tests_student\" LEFT OUTER JOIN \"tests_student_classes\" ON (\"tests_student\".\"id\" = \"tests_student_classes\".\"student_id\") INNER JOIN \"tests_assignmentstudent\" ON (\"tests_student\".\"id\" = \"tests_assignmentstudent\".\"student_id\") WHERE \"tests_assignmentstudent\".\"assignment_id\" IN ('00000000-0000-0000-0000-000000000020'::uuid) GROUP BY (\"tests_assignmentstudent\".\"assignment_id\"), \"tests_student\".\"id\""
+                "SELECT (\"tests_assignmentstudent\".\"assignment_id\") AS \"_prefetch_related_val_assignment_id\", \"tests_student\".\"id\", \"tests_student\".\"name\", COUNT(\"tests_student_classes\".\"class_id\") AS \"classes_count\" FROM \"tests_student\" LEFT OUTER JOIN \"tests_student_classes\" ON (\"tests_student\".\"id\" = \"tests_student_classes\".\"student_id\") INNER JOIN \"tests_assignmentstudent\" ON (\"tests_student\".\"id\" = \"tests_assignmentstudent\".\"student_id\") WHERE \"tests_assignmentstudent\".\"assignment_id\" IN ('00000000-0000-0000-0000-000000000020'::uuid) GROUP BY (\"tests_assignmentstudent\".\"assignment_id\"), \"tests_student\".\"id\"",
+                "SELECT (\"tests_student_classes\".\"student_id\") AS \"_prefetch_related_val_student_id\", \"tests_class\".\"id\" FROM \"tests_class\" INNER JOIN \"tests_student_classes\" ON (\"tests_class\".\"id\" = \"tests_student_classes\".\"class_id\") WHERE \"tests_student_classes\".\"student_id\" IN ('00000000-0000-0000-0000-000000000015'::uuid)",
             ]
         )
 
@@ -268,6 +269,10 @@ class DetailViewTestCase(SerializationSpecTestCase):
                     "id": uuid("15"),
                     "name": "Student 5",
                     "classes_count": 2,
+                    "classes": [
+                        uuid("5"),
+                        uuid("6"),
+                    ]
                 }
             ],
         })

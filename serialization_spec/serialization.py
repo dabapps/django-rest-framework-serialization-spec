@@ -85,47 +85,62 @@ def make_serializer_class(model, serialization_spec):
                 {'model': model, 'fields': get_fields(serialization_spec)}
             ),
             **{
+                key: SerializerLambdaField(impl=lambda value: [str(each.id) for each in getattr(value, key).all()])
+                for key in get_only_fields(model, serialization_spec)
+                if key in relations and relations[key].to_many
+            },
+            **{
                 key: make_serializer_class(
                     relations[key].related_model,
                     values
                 )(many=relations[key].to_many) if isinstance(values, list) else SerializerLambdaField(impl=values.get_value)
                 for key, values
                 in [item for each in get_childspecs(serialization_spec) for item in each.items()]
-            }
+            },
         }
     )
 
 
 def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_related):
     relations = model_meta.get_field_info(model).relations
-    for key, childspec in [item for each in get_childspecs(serialization_spec) for item in each.items()]:
-        key_path = '__'.join(prefixes + [key])
+    for each in serialization_spec:
+        if isinstance(each, dict):
+            for key, childspec in each.items():
+                key_path = '__'.join(prefixes + [key])
 
-        if isinstance(childspec, SerializationSpecPlugin):
-            childspec.key = key
-            queryset = childspec.modify_queryset(queryset)
+                if isinstance(childspec, SerializationSpecPlugin):
+                    childspec.key = key
+                    queryset = childspec.modify_queryset(queryset)
 
+                else:
+                    relation = relations[key]
+                    related_model = relation.related_model
+
+                    if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many):
+                        # no way to .only() on a select_related field
+                        queryset = queryset.select_related(key_path)
+                        queryset = prefetch_related(queryset, related_model, prefixes + [key], childspec, use_select_related)
+                    else:
+                        only_fields = get_only_fields(related_model, childspec)
+                        if relation.reverse and not relation.has_through_model:
+                            # need to include the reverse FK to allow prefetch to stitch results together
+                            # Unfortunately that info is in the model._meta but is not in the RelationInfo tuple
+                            reverse_fk = next(
+                                rel.field.name
+                                for rel in model._meta.related_objects
+                                if rel.get_accessor_name() == key
+                            )
+                            only_fields += ['%s_id' % reverse_fk]
+                        inner_queryset = prefetch_related(related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
+                        queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
         else:
-            relation = relations[key]
-            related_model = relation.related_model
-
-            if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many):
-                # no way to .only() on a select_related field
-                queryset = queryset.select_related(key_path)
-                queryset = prefetch_related(queryset, related_model, prefixes + [key], childspec, use_select_related)
-            else:
-                only_fields = get_only_fields(related_model, childspec)
-                if relation.reverse and not relation.has_through_model:
-                    # need to include the reverse FK to allow prefetch to stitch results together
-                    # Unfortunately that info is in the model._meta but is not in the RelationInfo tuple
-                    reverse_fk = next(
-                        rel.field.name
-                        for rel in model._meta.related_objects
-                        if rel.get_accessor_name() == key
-                    )
-                    only_fields += ['%s_id' % reverse_fk]
-                inner_queryset = prefetch_related(related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
-                queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
+            if each in relations:
+                relation = relations[each]
+                if relation.to_many:
+                    related_model = relation.related_model
+                    key_path = '__'.join(prefixes + [each])
+                    inner_queryset = related_model.objects.only('id')
+                    queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
 
     return queryset
 
