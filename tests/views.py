@@ -1,5 +1,6 @@
 from rest_framework import generics
-from serialization_spec.serialization import SerializationSpecMixin, CountOf
+from serialization_spec.serialization import SerializationSpecMixin
+from serialization_spec.plugins import CountOf
 from .models import Teacher, Student, Class, Subject, School, Assignment
 
 
