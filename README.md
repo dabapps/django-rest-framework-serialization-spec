@@ -1,6 +1,6 @@
 **EXPERIMENTAL**
 
-[![Build Status](https://travis-ci.com/dabapps/serialization-spec.svg?token=8zR1s286kqp7Z1h1qj91&branch=master)](https://travis-ci.com/dabapps/serialization-spec)
+[![Build Status](https://travis-ci.com/dabapps/django-rest-framework-serialization-spec.svg?token=8zR1s286kqp7Z1h1qj91&branch=master)](https://travis-ci.com/dabapps/django-rest-framework-serialization-spec)
 
 # Serialization Spec
 Write a single specification for a read endpoint which can be used to generate the optimal query and the serializers to serialize.
