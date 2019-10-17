@@ -17,8 +17,8 @@ author_email = 'engineering@dabapps.com'
 license = 'BSD'
 install_requires = [
     'Django>=1.11',
-    'djangorestframework==3.5.3',
-    'django-zen-queries==1.0.0'
+    'djangorestframework>=3.5.3',
+    'django-zen-queries>=1.0.0'
 ]
 long_description_content_type="text/markdown",
 long_description = """
