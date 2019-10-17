@@ -40,7 +40,7 @@ class Requires(SerializationSpecPlugin):
     """ Use this for a property which needs some underlying fields to be loaded """
 
     def __init__(self, fields):
-        self.fields
+        self.fields = fields
 
     def modify_queryset(self, queryset):
         extend_queryset(queryset, self.fields)
