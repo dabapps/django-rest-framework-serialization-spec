@@ -63,9 +63,10 @@ def get_fields(serialization_spec):
 
 def get_only_fields(model, serialization_spec):
     field_info = model_meta.get_field_info(model)
+    fields = set(field_info.fields_and_pk.keys()) | set(field_info.forward_relations.keys())
     return [
         field for field in get_fields(serialization_spec)
-        if field in field_info.fields_and_pk.keys() or field in field_info.forward_relations.keys()
+        if field in fields
     ]
 
 
@@ -103,14 +104,27 @@ def make_serializer_class(model, serialization_spec):
 
 def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_related):
     relations = model_meta.get_field_info(model).relations
+
+    extra_serialization_spec = []
     for each in serialization_spec:
+        if isinstance(each, dict):
+            for key, childspec in each.items():
+                if isinstance(childspec, SerializationSpecPlugin):
+                    extra_serialization_spec += getattr(childspec, 'serialization_spec', [])
+
+    print('extra_serialization_spec', extra_serialization_spec)
+
+    for each in serialization_spec + extra_serialization_spec:
         if isinstance(each, dict):
             for key, childspec in each.items():
                 key_path = '__'.join(prefixes + [key])
 
                 if isinstance(childspec, SerializationSpecPlugin):
-                    childspec.key = key
-                    queryset = childspec.modify_queryset(queryset)
+                    if not hasattr(childspec, 'serialization_spec'):
+                        childspec.key = key
+                        print(queryset)
+                        print('modify queryset for key', key)
+                        queryset = childspec.modify_queryset(queryset)
 
                 else:
                     relation = relations[key]
