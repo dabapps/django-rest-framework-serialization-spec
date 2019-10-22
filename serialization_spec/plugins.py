@@ -1,5 +1,6 @@
 from django.db.models import Count
 from .serialization import SerializationSpecPlugin
+from .utils import extend_queryset
 
 
 class SerializationSpecPluginModel(SerializationSpecPlugin):
@@ -26,14 +27,6 @@ class CountOf(SerializationSpecPluginModel):
 class Exists(CountOf):
     def get_value(self, instance):
         return super().get_value(instance) > 0
-
-
-def extend_queryset(queryset, fields):
-    # This the means by which an already-`.only()`d queryset can be extended with more fields
-    existing, defer = queryset.query.deferred_loading
-    existing_set = set(existing)
-    existing_set.update(fields)
-    queryset.query.deferred_loading = (frozenset(existing_set), defer)
 
 
 class Requires(SerializationSpecPlugin):

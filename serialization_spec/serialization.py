@@ -63,9 +63,10 @@ def get_fields(serialization_spec):
 
 def get_only_fields(model, serialization_spec):
     field_info = model_meta.get_field_info(model)
+    fields = set(field_info.fields_and_pk.keys()) | set(field_info.forward_relations.keys())
     return [
         field for field in get_fields(serialization_spec)
-        if field in field_info.fields_and_pk.keys() or field in field_info.forward_relations.keys()
+        if field in fields
     ]
 
 
@@ -103,6 +104,7 @@ def make_serializer_class(model, serialization_spec):
 
 def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_related):
     relations = model_meta.get_field_info(model).relations
+
     for each in serialization_spec:
         if isinstance(each, dict):
             for key, childspec in each.items():
@@ -145,6 +147,14 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
     return queryset
 
 
+def expand_nested_serialization_specs(serialization_spec):
+    return serialization_spec + sum([
+        getattr(childspec, 'serialization_spec', [])
+        for each in serialization_spec if isinstance(each, dict)
+        for key, childspec in each.items() if isinstance(childspec, SerializationSpecPlugin)
+    ], [])
+
+
 class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     serialization_spec = None  # type: SerializationSpec
@@ -155,8 +165,9 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     def get_queryset(self):
         queryset = self.queryset
-        queryset = queryset.only(*get_only_fields(queryset.model, self.serialization_spec))
-        queryset = prefetch_related(queryset, queryset.model, [], self.serialization_spec, getattr(self, 'use_select_related', False))
+        serialization_spec = expand_nested_serialization_specs(self.serialization_spec)
+        queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
+        queryset = prefetch_related(queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
         return queryset
 
     def get_serializer_class(self):
