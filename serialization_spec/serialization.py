@@ -164,7 +164,7 @@ class NormalisedSpec:
 
 
 def normalise_spec(serialization_spec):
-    def _normalise_spec(spec, normalised_spec):
+    def normalise(spec, normalised_spec):
         if isinstance(spec, SerializationSpecPlugin):
             normalised_spec.spec = spec
             return
@@ -174,7 +174,7 @@ def normalise_spec(serialization_spec):
                 for key, childspec in each.items():
                     if key not in normalised_spec.relations:
                         normalised_spec.relations[key] = NormalisedSpec()
-                    _normalise_spec(childspec, normalised_spec.relations[key])
+                    normalise(childspec, normalised_spec.relations[key])
             else:
                 normalised_spec.fields[each] = True
 
@@ -187,7 +187,7 @@ def normalise_spec(serialization_spec):
         )
 
     normalised_spec = NormalisedSpec()
-    _normalise_spec(serialization_spec, normalised_spec)
+    normalise(serialization_spec, normalised_spec)
     return combine(normalised_spec)
 
 
