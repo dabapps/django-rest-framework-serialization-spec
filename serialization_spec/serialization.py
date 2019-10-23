@@ -5,6 +5,7 @@ from rest_framework.serializers import ModelSerializer
 from zen_queries.rest_framework import QueriesDisabledViewMixin
 
 from typing import List, Dict, Union
+from collections import OrderedDict
 
 """
 Parse a serialization spec such as:
@@ -147,12 +148,47 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
     return queryset
 
 
-def expand_nested_serialization_specs(serialization_spec):
+def expand_nested_specs(serialization_spec):
     return serialization_spec + sum([
         getattr(childspec, 'serialization_spec', [])
         for each in serialization_spec if isinstance(each, dict)
         for key, childspec in each.items() if isinstance(childspec, SerializationSpecPlugin)
     ], [])
+
+
+class NormalisedSpec:
+    def __init__(self):
+        self.spec = None
+        self.fields = OrderedDict()
+        self.relations = OrderedDict()
+
+
+def normalise_spec(serialization_spec):
+    def _normalise_spec(spec, normalised_spec):
+        if isinstance(spec, SerializationSpecPlugin):
+            normalised_spec.spec = spec
+            return
+
+        for each in spec:
+            if isinstance(each, dict):
+                for key, childspec in each.items():
+                    if key not in normalised_spec.relations:
+                        normalised_spec.relations[key] = NormalisedSpec()
+                    _normalise_spec(childspec, normalised_spec.relations[key])
+            else:
+                normalised_spec.fields[each] = True
+
+    def combine(normalised_spec):
+        return normalised_spec.spec or (
+            list(normalised_spec.fields.keys()) + ([{
+                key: combine(value)
+                for key, value in normalised_spec.relations.items()
+            }] if normalised_spec.relations else [])
+        )
+
+    normalised_spec = NormalisedSpec()
+    _normalise_spec(serialization_spec, normalised_spec)
+    return combine(normalised_spec)
 
 
 class SerializationSpecMixin(QueriesDisabledViewMixin):
@@ -165,7 +201,8 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     def get_queryset(self):
         queryset = self.queryset
-        serialization_spec = expand_nested_serialization_specs(self.serialization_spec)
+        serialization_spec = expand_nested_specs(self.serialization_spec)
+        serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
         queryset = prefetch_related(queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
         return queryset
