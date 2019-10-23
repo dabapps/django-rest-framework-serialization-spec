@@ -162,5 +162,8 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             {'classes_count': CountOf('classes')},
             'classes',
         ]},
-        {'class_name': ClassName()}
+        {'class_name': ClassName()},
+        {'clasz': [
+            {'num_students': CountOf('student')},
+        ]},
     ]
