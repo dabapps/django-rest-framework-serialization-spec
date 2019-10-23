@@ -103,6 +103,14 @@ def make_serializer_class(model, serialization_spec):
     )
 
 
+def has_plugin(spec):
+    return any(
+        isinstance(childspec, SerializationSpecPlugin) or has_plugin(childspec)
+        for each in spec if isinstance(each, dict)
+        for key, childspec in each.items()
+    )
+
+
 def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_related):
     relations = model_meta.get_field_info(model).relations
 
@@ -119,7 +127,7 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                     relation = relations[key]
                     related_model = relation.related_model
 
-                    if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many):
+                    if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many) and not has_plugin(childspec):
                         # no way to .only() on a select_related field
                         queryset = queryset.select_related(key_path)
                         queryset = prefetch_related(queryset, related_model, prefixes + [key], childspec, use_select_related)

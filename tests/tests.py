@@ -256,9 +256,10 @@ class DetailViewTestCase(SerializationSpecTestCase):
         self.assertJsonEqual(
             sorted(query['sql'] for query in capture.captured_queries),
             [
-                "SELECT \"tests_assignment\".\"id\", \"tests_assignment\".\"name\", \"tests_assignment\".\"clasz_id\", \"tests_class\".\"id\", \"tests_class\".\"created\", \"tests_class\".\"modified\", \"tests_class\".\"subject_id\", \"tests_class\".\"name\", \"tests_class\".\"teacher_id\", \"tests_teacher\".\"id\", \"tests_teacher\".\"created\", \"tests_teacher\".\"modified\", \"tests_teacher\".\"name\", \"tests_teacher\".\"school_id\" FROM \"tests_assignment\" INNER JOIN \"tests_class\" ON (\"tests_assignment\".\"clasz_id\" = \"tests_class\".\"id\") INNER JOIN \"tests_teacher\" ON (\"tests_class\".\"teacher_id\" = \"tests_teacher\".\"id\") WHERE \"tests_assignment\".\"id\" = '00000000-0000-0000-0000-000000000020'::uuid",
-                "SELECT (\"tests_assignmentstudent\".\"assignment_id\") AS \"_prefetch_related_val_assignment_id\", \"tests_student\".\"id\", \"tests_student\".\"name\", COUNT(\"tests_student_classes\".\"class_id\") AS \"classes_count\" FROM \"tests_student\" LEFT OUTER JOIN \"tests_student_classes\" ON (\"tests_student\".\"id\" = \"tests_student_classes\".\"student_id\") INNER JOIN \"tests_assignmentstudent\" ON (\"tests_student\".\"id\" = \"tests_assignmentstudent\".\"student_id\") WHERE \"tests_assignmentstudent\".\"assignment_id\" IN ('00000000-0000-0000-0000-000000000020'::uuid) GROUP BY (\"tests_assignmentstudent\".\"assignment_id\"), \"tests_student\".\"id\"",
-                "SELECT (\"tests_student_classes\".\"student_id\") AS \"_prefetch_related_val_student_id\", \"tests_class\".\"id\" FROM \"tests_class\" INNER JOIN \"tests_student_classes\" ON (\"tests_class\".\"id\" = \"tests_student_classes\".\"class_id\") WHERE \"tests_student_classes\".\"student_id\" IN ('00000000-0000-0000-0000-000000000015'::uuid)",
+                """SELECT "tests_assignment"."id", "tests_assignment"."name", "tests_assignment"."clasz_id" FROM "tests_assignment" WHERE "tests_assignment"."id" = '00000000-0000-0000-0000-000000000020'::uuid""",
+                """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", COUNT("tests_student_classes"."student_id") AS "student_count", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_class" LEFT OUTER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") WHERE "tests_class"."id" IN ('00000000-0000-0000-0000-000000000006'::uuid) GROUP BY "tests_class"."id", "tests_teacher"."id\"""",
+                """SELECT ("tests_assignmentstudent"."assignment_id") AS "_prefetch_related_val_assignment_id", "tests_student"."id", "tests_student"."name", COUNT("tests_student_classes"."class_id") AS "classes_count" FROM "tests_student" LEFT OUTER JOIN "tests_student_classes" ON ("tests_student"."id" = "tests_student_classes"."student_id") INNER JOIN "tests_assignmentstudent" ON ("tests_student"."id" = "tests_assignmentstudent"."student_id") WHERE "tests_assignmentstudent"."assignment_id" IN ('00000000-0000-0000-0000-000000000020'::uuid) GROUP BY ("tests_assignmentstudent"."assignment_id"), "tests_student"."id\"""",
+                """SELECT ("tests_student_classes"."student_id") AS "_prefetch_related_val_student_id", "tests_class"."id" FROM "tests_class" INNER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") WHERE "tests_student_classes"."student_id" IN ('00000000-0000-0000-0000-000000000015'::uuid)""",
             ]
         )
 
@@ -277,6 +278,9 @@ class DetailViewTestCase(SerializationSpecTestCase):
                 }
             ],
             "class_name": "Math B - Mr Cat",
+            "clasz": {
+                "num_students": 7
+            },
         })
 
 
@@ -289,10 +293,10 @@ class ListViewTestCase(SerializationSpecTestCase):
         self.assertJsonEqual(
             sorted(query['sql'] for query in capture.captured_queries),
             [
-                "SELECT \"tests_class\".\"id\", \"tests_class\".\"name\", \"tests_class\".\"teacher_id\" FROM \"tests_class\" WHERE \"tests_class\".\"teacher_id\" IN ('00000000-0000-0000-0000-000000000002'::uuid, '00000000-0000-0000-0000-000000000007'::uuid)",
-                "SELECT \"tests_school\".\"id\", \"tests_school\".\"name\" FROM \"tests_school\" WHERE \"tests_school\".\"id\" IN ('00000000-0000-0000-0000-000000000001'::uuid)",
-                "SELECT \"tests_teacher\".\"id\", \"tests_teacher\".\"name\", \"tests_teacher\".\"school_id\" FROM \"tests_teacher\" ORDER BY \"tests_teacher\".\"name\" ASC LIMIT 2",
-                "SELECT COUNT(*) AS \"__count\" FROM \"tests_teacher\"",
+                """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id" FROM "tests_class" WHERE "tests_class"."teacher_id" IN ('00000000-0000-0000-0000-000000000002'::uuid, '00000000-0000-0000-0000-000000000007'::uuid)""",
+                """SELECT "tests_school"."id", "tests_school"."name" FROM "tests_school" WHERE "tests_school"."id" IN ('00000000-0000-0000-0000-000000000001'::uuid)""",
+                """SELECT "tests_teacher"."id", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_teacher" ORDER BY "tests_teacher"."name" ASC LIMIT 2""",
+                """SELECT COUNT(*) AS "__count" FROM "tests_teacher\"""",
             ]
         )
 
