@@ -10,4 +10,5 @@ urlpatterns = [
     url(r'^schools/(?P<id>[0-9a-f-]+)/$', view=views.SchoolDetailView.as_view(), name='school-detail'),
     url(r'^students-detail/(?P<id>[0-9a-f-]+)/$', view=views.StudentWithAssignmentsDetailView.as_view(), name='student-with-assignments-detail'),
     url(r'^assignments/(?P<id>[0-9a-f-]+)/$', view=views.AssignmentDetailView.as_view(), name='assignment-detail'),
+    url(r'^assignments/$', view=views.AssignmentListView.as_view(), name='assignment-list'),
 ]

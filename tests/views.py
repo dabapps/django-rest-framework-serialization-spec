@@ -1,5 +1,5 @@
 from rest_framework import generics
-from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin
+from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Cache
 from serialization_spec.plugins import CountOf
 from .models import Teacher, Student, Class, Subject, School, Assignment
 
@@ -163,4 +163,32 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             'classes',
         ]},
         {'class_name': ClassName()}
+    ]
+
+
+class ClassAssigneesList(SerializationSpecPlugin):
+    def get_value(self, instance):
+        return [
+            assignee['name']
+            for assignee in self.root.assignees.all()
+            if instance.id in assignee.classes.all()
+        ]
+
+
+class AssignmentListView(SerializationSpecMixin, generics.ListAPIView):
+
+    queryset = Assignment.objects.all()
+    lookup_field = 'id'
+
+    serialization_spec = [
+        'id',
+        'name',
+        Cache({'assignees': [
+            'name',
+            'classes',
+        ]}),
+        {'class': [
+            'name',
+            {'assignees_list': ClassAssigneesList()}
+        ]}
     ]

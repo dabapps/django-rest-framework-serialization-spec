@@ -32,6 +32,11 @@ mixin should implement get_queryset() and get_serializer()
 """
 
 
+class Cache:
+    def __init__(self, _dict):
+        self._dict = _dict
+
+
 class SerializerLambdaField(Field):
     def __init__(self, impl, **kwargs):
         self.impl = impl
@@ -74,7 +79,7 @@ def get_childspecs(serialization_spec):
     return [each for each in serialization_spec if isinstance(each, dict)]
 
 
-def make_serializer_class(model, serialization_spec):
+def make_serializer_class(queryset, model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
     return type(
         'MySerializer',
@@ -92,9 +97,10 @@ def make_serializer_class(model, serialization_spec):
             },
             **{
                 key: make_serializer_class(
+                    queryset,
                     relations[key].related_model,
                     values
-                )(many=relations[key].to_many) if isinstance(values, list) else SerializerLambdaField(impl=values.get_value)
+                )(many=relations[key].to_many) if isinstance(values, list) else values.root_queryset = queryset or SerializerLambdaField(impl=values.get_value)
                 for key, values
                 in [item for each in get_childspecs(serialization_spec) for item in each.items()]
             },
@@ -148,7 +154,9 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
 
 
 def expand_nested_serialization_specs(serialization_spec):
-    return serialization_spec + sum([
+    return [
+        each._dict if isinstance(each, Cache) else each for each in serialization_spec
+    ] + sum([
         getattr(childspec, 'serialization_spec', [])
         for each in serialization_spec if isinstance(each, dict)
         for key, childspec in each.items() if isinstance(childspec, SerializationSpecPlugin)
@@ -168,10 +176,15 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
         serialization_spec = expand_nested_serialization_specs(self.serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
         queryset = prefetch_related(queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
+        self._root_queryset = queryset
         return queryset
 
     def get_serializer_class(self):
-        return make_serializer_class(self.queryset.model, self.serialization_spec)
+        return make_serializer_class(
+            self._root_queryset,
+            self.queryset.model,
+            [each for each in self.serialization_spec if not isinstance(each, Cache)]
+        )
 
 
 """
