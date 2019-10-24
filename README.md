@@ -15,7 +15,9 @@ from rest_framework.generics import RetrieveAPIView
 from serialization_spec.serialization import SerializationSpecMixin
 
 class AnimalDetail(SerializationSpecMixin, RetrieveAPIView):
+
     queryset = Animal.objects.all()
+    
     serialization_spec = [
         'id',
         'name',
@@ -35,6 +37,7 @@ This results in the following queries being made:
 
 ```
 SELECT animal.id, animal.name FROM animal WHERE animal.id = 1;
+
 SELECT (animal_breeds.animal_id) AS _prefetch_related_val_animal_id,
 		breed.id,
 		breed.name
@@ -73,7 +76,7 @@ Iterate over `serialization_spec` and build an optimised queryset.
 Iterate over `serialization_spec` and build a nested hierarchy of `ModelSerializer`s which will serialize the model data already fetched in `get_queryset()`.
 
 ## Plugins
-As well as access to model fields, you require certain computations to applied to the queryset.
+As well as access to model fields, you can also specify computations to be applied.
 A useful set of these is provided, as well as a framework to build bespoke ones.
 
 #### CountOf, Exists
