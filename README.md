@@ -28,43 +28,40 @@ class AnimalDetail(SerializationSpecMixin, RetrieveAPIView):
     ]
 ```
 
-When this view is accessed via the corresponding URL:
+When this view is accessed via its URL it returns the following response data:
 ```
 GET:/animals/1
 ```
-
-This results in the following queries being made:
-
+```json
+{
+    "id": 1,
+    "name": "Doggos",
+    "breeds": [
+        {
+            "id": 1,
+            "name": "Labrador",
+        },
+        {
+            "id": 2,
+            "name": "Poodle",
+        },
+    ]
+}
 ```
+
+These are the SQL queries that were made:
+```sql
 SELECT animal.id, animal.name FROM animal WHERE animal.id = 1;
 
 SELECT (animal_breeds.animal_id) AS _prefetch_related_val_animal_id,
-		breed.id,
-		breed.name
-	FROM breed
-	INNER JOIN animal_breeds
-		ON (breed.id = animal_breeds.breed_id)
-	WHERE animal_breeds.animal_id IN (1);
+        breed.id,
+        breed.name
+    FROM breed
+    INNER JOIN animal_breeds
+        ON (breed.id = animal_breeds.breed_id)
+    WHERE animal_breeds.animal_id IN (1);
 ```
 
-And the following data being returned:
-
-```
-{
-	"id": 1,
-	"name": "Doggos",
-	"breeds": [
-		{
-			"id": 1,
-			"name": "Labrador",
-		},
-		{
-			"id": 2,
-			"name": "Poodle",
-		},
-	]
-}
-```
 ## Implementation
 
 The mixin implements `get_queryset()` and `get_serializer_class()` which you can subsequently override to specialise or refine the behaviour.
@@ -82,11 +79,11 @@ A useful set of these is provided, as well as a framework to build bespoke ones.
 #### CountOf, Exists
 Illustrated most straightforwardly with an example:
 ```python
-	serialization_spec = [
-		# ...
-		{'has_breeds': Exists('breeds')},
-		{'num_breeds': CountOf('breeds')},
-	]
+    serialization_spec = [
+        # ...
+        {'has_breeds': Exists('breeds')},
+        {'num_breeds': CountOf('breeds')},
+    ]
 ```
 
 #### Requires
@@ -95,18 +92,18 @@ Sometimes a model property requires certain underlying fields to be loaded:
 from django.db import models
 
 class Animal(models.Model):
-	# ...
-	age = models.IntegerField()
+    # ...
+    age = models.IntegerField()
 
-	@property
-	def status(self):
-		return 'retired' if self.age > 10 else 'active'
+    @property
+    def status(self):
+        return 'retired' if self.age > 10 else 'active'
 ```
 ```python
-	serialization_spec = [
-		# ...
-		{'status': Requires(['age'])}
-	]
+    serialization_spec = [
+        # ...
+        {'status': Requires(['age'])}
+    ]
 ```
 
 ### Building bespoke plugins
@@ -127,10 +124,10 @@ class UsersCompletedCount(SerializationSpecPlugin):
 
 # ...
 
-	serialization_spec = [
-		# ...
-		{'users_completed_count': UsersCompletedCount()}
-	]
+    serialization_spec = [
+        # ...
+        {'users_completed_count': UsersCompletedCount()}
+    ]
 ```
 
 Plugins may also refer to `self.key` if they need to know the key beneath which they were inserted into the `serialization_spec`.
