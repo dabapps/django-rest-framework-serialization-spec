@@ -1,3 +1,4 @@
+from typing import Dict, Any
 from django.db.models import Count
 from .serialization import SerializationSpecPlugin
 from .utils import extend_queryset
@@ -5,6 +6,7 @@ from .utils import extend_queryset
 
 class SerializationSpecPluginModel(SerializationSpecPlugin):
     """ Derive from this if you want to apply model a function """
+    kwargs = {}  # type: Dict[str, Any]
 
     def __init__(self, relation):
         self.relation = relation
@@ -13,7 +15,7 @@ class SerializationSpecPluginModel(SerializationSpecPlugin):
         return '%s_%s' % (self.relation, self.name)
 
     def modify_queryset(self, queryset):
-        return queryset.annotate(**{self.get_name(): self.model_function(self.relation)})
+        return queryset.annotate(**{self.get_name(): self.model_function(self.relation, **self.kwargs)})
 
     def get_value(self, instance):
         return getattr(instance, self.get_name())
@@ -22,6 +24,7 @@ class SerializationSpecPluginModel(SerializationSpecPlugin):
 class CountOf(SerializationSpecPluginModel):
     name = 'count'
     model_function = Count
+    kwargs = {'distinct': True}  # To prevent counts clashing with each other
 
 
 class Exists(CountOf):
