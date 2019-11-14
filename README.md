@@ -131,3 +131,16 @@ class UsersCompletedCount(SerializationSpecPlugin):
 ```
 
 Plugins may also refer to `self.key` if they need to know the key beneath which they were inserted into the `serialization_spec`.
+
+## Filtered
+`Filtered` works much like a Plugin but is handled differently in the implementation. It used where the set of values needed on a 1:M relation should have a filter applied to it. It takes a [django `Q()` object](https://docs.djangoproject.com/en/2.2/topics/db/queries/#complex-lookups-with-q-objects) as well as a child serialization spec:
+
+```python
+    serialization_spec = [
+        # ...
+        {'users': Filtered(Q(completed=True), [
+             'id',
+             'full_name',
+        ]}
+    ]
+```
