@@ -55,6 +55,12 @@ class SerializationSpecPlugin:
         raise NotImplementedError
 
 
+class Filtered:
+    def __init__(self, filters, serialization_spec):
+        self.filters = filters
+        self.serialization_spec = serialization_spec
+
+
 def get_fields(serialization_spec):
     return sum(
         [list(x.keys()) if isinstance(x, dict) else [x] for x in serialization_spec],
@@ -77,6 +83,7 @@ def get_childspecs(serialization_spec):
 
 def make_serializer_class(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
+
     return type(
         'MySerializer',
         (ModelSerializer,),
@@ -92,10 +99,13 @@ def make_serializer_class(model, serialization_spec):
                 if key in relations and relations[key].to_many
             },
             **{
-                key: make_serializer_class(
-                    relations[key].related_model,
-                    values
-                )(many=relations[key].to_many) if isinstance(values, list) else SerializerLambdaField(impl=values.get_value)
+                key: (
+                    SerializerLambdaField(impl=values.get_value) if isinstance(values, SerializationSpecPlugin)
+                    else make_serializer_class(
+                        relations[key].related_model,
+                        values.serialization_spec if isinstance(values, Filtered) else values
+                    )(many=relations[key].to_many)
+                )
                 for key, values
                 in [item for each in get_childspecs(serialization_spec) for item in each.items()]
             },
@@ -124,6 +134,12 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                     queryset = childspec.modify_queryset(queryset)
 
                 else:
+                    if isinstance(childspec, Filtered):
+                        filters = childspec.filters
+                        childspec = childspec.serialization_spec
+                    else:
+                        filters = None
+
                     relation = relations[key]
                     related_model = relation.related_model
 
@@ -143,6 +159,8 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                             )
                             only_fields += ['%s_id' % reverse_fk]
                         inner_queryset = prefetch_related(related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
+                        if filters:
+                            inner_queryset = inner_queryset.filter(filters)
                         queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
         else:
             if each in relations:
@@ -173,7 +191,7 @@ class NormalisedSpec:
 
 def normalise_spec(serialization_spec):
     def normalise(spec, normalised_spec):
-        if isinstance(spec, SerializationSpecPlugin):
+        if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, Filtered):
             normalised_spec.spec = spec
             return
 
@@ -227,11 +245,11 @@ serialization_spec type should be
 But recursive types are not yet implemented :(
 So we specify to an (arbitrary) depth of 5
 """
-SerializationSpec = List[Union[str, Dict[str, Union[SerializationSpecPlugin,
-    List[Union[str, Dict[str, Union[SerializationSpecPlugin,
-        List[Union[str, Dict[str, Union[SerializationSpecPlugin,
-            List[Union[str, Dict[str, Union[SerializationSpecPlugin,
-                List[Union[str, Dict[str, Union[SerializationSpecPlugin,
+SerializationSpec = List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
+    List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
+        List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
+            List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
+                List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
                     List]]]]
             ]]]]
         ]]]]
