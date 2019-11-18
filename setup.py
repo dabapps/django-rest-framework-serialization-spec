@@ -7,10 +7,10 @@ import re
 import os
 import sys
 
-
 name = 'django-rest-framework-serialization-spec'
 package = 'serialization_spec'
 description = 'Specify API endpoint data shape declaratively in a DRF view'
+long_description = description
 url = 'https://www.dabapps.com'
 author = 'DabApps'
 author_email = 'engineering@dabapps.com'
@@ -21,32 +21,6 @@ install_requires = [
     'djangorestframework>=3.5.3',
     'django-zen-queries>=1.0.0'
 ]
-long_description_content_type="text/markdown",
-long_description = """
-    ## Specify API endpoint data shape declaratively in a DRF view
-
-    Given a serialization spec such as:
-
-    ```
-    class ItemDetail(SerializationSpecMixin, generics.RetrieveAPIView):
-
-        queryset = Item.objects.all()
-        serialization_spec = [
-            'id',
-            {'product': [
-                'id',
-                'name'
-            ]},
-            {'report_templates': [
-                'id',
-                'name'
-            ]}
-        ]
-    ```
-
-    1. Fetch the data required to populate this using a minimal set of queries
-    2. Serialize it
-    """
 
 def get_version(package):
     """
