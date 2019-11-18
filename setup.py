@@ -15,6 +15,7 @@ url = 'https://www.dabapps.com'
 author = 'DabApps'
 author_email = 'engineering@dabapps.com'
 license = 'BSD'
+download_url = 'https://github.com/dabapps/django-rest-framework-serialization-spec/archive/v0.1-beta.tar.gz'
 install_requires = [
     'Django>=1.11',
     'djangorestframework>=3.5.3',
@@ -96,6 +97,7 @@ setup(
     license=license,
     description=description,
     long_description=long_description,
+    download_url=download_url,
     author=author,
     author_email=author_email,
     packages=get_packages(package),
