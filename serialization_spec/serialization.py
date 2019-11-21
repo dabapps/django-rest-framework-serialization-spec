@@ -189,7 +189,7 @@ class NormalisedSpec:
         self.relations = OrderedDict()
 
 
-def normalise_spec(serialization_spec, request_user=None):
+def normalise_spec(serialization_spec, request_user):
     def normalise(spec, normalised_spec):
         if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, Filtered):
             spec.request_user = request_user

@@ -347,7 +347,7 @@ class NormalisationTestCase(TestCase):
             {'four': []},
         ]
 
-        self.assertEqual(normalise_spec(spec), [
+        self.assertEqual(normalise_spec(spec, None), [
             'one',
             {
                 'two': [
@@ -366,7 +366,7 @@ class NormalisationTestCase(TestCase):
             'one',
         ]
 
-        self.assertEqual(normalise_spec(spec), [
+        self.assertEqual(normalise_spec(spec, None), [
             'one',
             {'two': [
                 'three',
@@ -384,7 +384,7 @@ class NormalisationTestCase(TestCase):
             ]},
         ]
 
-        self.assertEqual(normalise_spec(spec), [
+        self.assertEqual(normalise_spec(spec, None), [
             'one',
             {'two': [
                 'three',
@@ -409,7 +409,7 @@ class NormalisationTestCase(TestCase):
             ]},
         ]
 
-        self.assertEqual(normalise_spec(spec), [
+        self.assertEqual(normalise_spec(spec, None), [
             'one',
             {'two': [
                 'four',
