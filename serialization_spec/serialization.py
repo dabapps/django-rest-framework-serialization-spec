@@ -189,9 +189,10 @@ class NormalisedSpec:
         self.relations = OrderedDict()
 
 
-def normalise_spec(serialization_spec):
+def normalise_spec(serialization_spec, request_user):
     def normalise(spec, normalised_spec):
         if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, Filtered):
+            spec.request_user = request_user
             normalised_spec.spec = spec
             return
 
@@ -228,7 +229,7 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
     def get_queryset(self):
         queryset = self.queryset
         serialization_spec = expand_nested_specs(self.serialization_spec)
-        serialization_spec = normalise_spec(serialization_spec)
+        serialization_spec = normalise_spec(serialization_spec, self.request.user)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
         queryset = prefetch_related(queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
         return queryset
