@@ -55,10 +55,21 @@ class SerializationSpecPlugin:
         raise NotImplementedError
 
 
-class Filtered:
-    def __init__(self, filters, serialization_spec):
-        self.filters = filters
+class FilterPlugin:
+    def __init__(self, serialization_spec):
         self.serialization_spec = serialization_spec
+
+    def modify_queryset(self, queryset):
+        return queryset
+
+
+class Filtered(FilterPlugin):
+    def __init__(self, filters, serialization_spec):
+        super().__init__(serialization_spec)
+        self.filters = filters
+
+    def modify_queryset(self, queryset):
+        return queryset.filter(self.filters)
 
 
 def get_fields(serialization_spec):
@@ -103,7 +114,7 @@ def make_serializer_class(model, serialization_spec):
                     SerializerLambdaField(impl=values.get_value) if isinstance(values, SerializationSpecPlugin)
                     else make_serializer_class(
                         relations[key].related_model,
-                        values.serialization_spec if isinstance(values, Filtered) else values
+                        values.serialization_spec if isinstance(values, FilterPlugin) else values
                     )(many=relations[key].to_many)
                 )
                 for key, values
@@ -134,11 +145,11 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                     queryset = childspec.modify_queryset(queryset)
 
                 else:
-                    if isinstance(childspec, Filtered):
-                        filters = childspec.filters
+                    if isinstance(childspec, FilterPlugin):
+                        filter_plugin = childspec
                         childspec = childspec.serialization_spec
                     else:
-                        filters = None
+                        filter_plugin = None
 
                     relation = relations[key]
                     related_model = relation.related_model
@@ -159,8 +170,8 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                             )
                             only_fields += ['%s_id' % reverse_fk]
                         inner_queryset = prefetch_related(related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
-                        if filters:
-                            inner_queryset = inner_queryset.filter(filters)
+                        if filter_plugin:
+                            inner_queryset = filter_plugin.modify_queryset(inner_queryset)
                         queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
         else:
             if each in relations:
@@ -191,7 +202,7 @@ class NormalisedSpec:
 
 def normalise_spec(serialization_spec, request_user):
     def normalise(spec, normalised_spec):
-        if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, Filtered):
+        if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, FilterPlugin):
             spec.request_user = request_user
             normalised_spec.spec = spec
             return
