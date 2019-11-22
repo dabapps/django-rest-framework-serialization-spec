@@ -161,7 +161,7 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
                             only_fields += ['%s_id' % reverse_fk]
                         inner_queryset = prefetch_related(request_user, related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
                         if filters:
-                            inner_queryset = inner_queryset.filter(filters)
+                            inner_queryset = inner_queryset.filter(filters).distinct()
                         queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
         else:
             if each in relations:
