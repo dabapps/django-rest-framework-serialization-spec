@@ -121,7 +121,7 @@ def has_plugin(spec):
     )
 
 
-def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_related):
+def prefetch_related(request_user, queryset, model, prefixes, serialization_spec, use_select_related):
     relations = model_meta.get_field_info(model).relations
 
     for each in serialization_spec:
@@ -131,6 +131,7 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
 
                 if isinstance(childspec, SerializationSpecPlugin):
                     childspec.key = key
+                    childspec.request_user = request_user
                     queryset = childspec.modify_queryset(queryset)
 
                 else:
@@ -146,7 +147,7 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                     if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many) and not has_plugin(childspec):
                         # no way to .only() on a select_related field
                         queryset = queryset.select_related(key_path)
-                        queryset = prefetch_related(queryset, related_model, prefixes + [key], childspec, use_select_related)
+                        queryset = prefetch_related(request_user, queryset, related_model, prefixes + [key], childspec, use_select_related)
                     else:
                         only_fields = get_only_fields(related_model, childspec)
                         if relation.reverse and not relation.has_through_model:
@@ -158,9 +159,9 @@ def prefetch_related(queryset, model, prefixes, serialization_spec, use_select_r
                                 if rel.get_accessor_name() == key
                             )
                             only_fields += ['%s_id' % reverse_fk]
-                        inner_queryset = prefetch_related(related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
+                        inner_queryset = prefetch_related(request_user, related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
                         if filters:
-                            inner_queryset = inner_queryset.filter(filters)
+                            inner_queryset = inner_queryset.filter(filters).distinct()
                         queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
         else:
             if each in relations:
@@ -189,10 +190,9 @@ class NormalisedSpec:
         self.relations = OrderedDict()
 
 
-def normalise_spec(serialization_spec, request_user):
+def normalise_spec(serialization_spec):
     def normalise(spec, normalised_spec):
         if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, Filtered):
-            spec.request_user = request_user
             normalised_spec.spec = spec
             return
 
@@ -229,9 +229,9 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
     def get_queryset(self):
         queryset = self.queryset
         serialization_spec = expand_nested_specs(self.serialization_spec)
-        serialization_spec = normalise_spec(serialization_spec, self.request.user)
+        serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
-        queryset = prefetch_related(queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
+        queryset = prefetch_related(self.request.user, queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
         return queryset
 
     def get_serializer_class(self):
