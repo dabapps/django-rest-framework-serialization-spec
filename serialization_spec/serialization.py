@@ -175,9 +175,15 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
     return queryset
 
 
-def expand_nested_specs(serialization_spec):
+def expand_nested_specs(serialization_spec, request_user):
+    def get_serialization_spec(serialization_spec_plugin):
+        if hasattr(serialization_spec_plugin, 'get_serialization_spec'):
+            serialization_spec_plugin.request_user = request_user
+            return serialization_spec_plugin.get_serialization_spec()
+        return getattr(serialization_spec_plugin, 'serialization_spec', [])
+
     return serialization_spec + sum([
-        getattr(childspec, 'serialization_spec', [])
+        get_serialization_spec(childspec)
         for each in serialization_spec if isinstance(each, dict)
         for key, childspec in each.items() if isinstance(childspec, SerializationSpecPlugin)
     ], [])
@@ -228,7 +234,9 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     def get_queryset(self):
         queryset = self.queryset
-        serialization_spec = expand_nested_specs(self.serialization_spec)
+        if hasattr(self, 'get_serialization_spec'):
+            self.serialization_spec = self.get_serialization_spec()
+        serialization_spec = expand_nested_specs(self.serialization_spec, self.request.user)
         serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
         queryset = prefetch_related(self.request.user, queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
