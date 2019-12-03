@@ -56,8 +56,20 @@ class SerializationSpecPlugin:
 
 
 class Filtered:
-    def __init__(self, filters, serialization_spec):
-        self.filters = filters
+    def __init__(self, *args):
+        if len(args) == 2:
+            self.field_name = None
+            self.filters, self.serialization_spec = args
+        elif len(args) == 3:
+            self.field_name, self.filters, self.serialization_spec = args
+        else:
+            raise Exception('Specify filters and serialization_spec for Filtered')
+
+
+class Aliased(Filtered):
+    def __init__(self, field_name, serialization_spec):
+        self.filters = None
+        self.field_name = field_name
         self.serialization_spec = serialization_spec
 
 
@@ -81,6 +93,13 @@ def get_childspecs(serialization_spec):
     return [each for each in serialization_spec if isinstance(each, dict)]
 
 
+def handle_filtered(item):
+    key, values = item
+    if isinstance(values, Filtered):
+        return key, values.field_name or key, values.serialization_spec
+    return key, key, values
+
+
 def make_serializer_class(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
 
@@ -102,12 +121,12 @@ def make_serializer_class(model, serialization_spec):
                 key: (
                     SerializerLambdaField(impl=values.get_value) if isinstance(values, SerializationSpecPlugin)
                     else make_serializer_class(
-                        relations[key].related_model,
-                        values.serialization_spec if isinstance(values, Filtered) else values
-                    )(many=relations[key].to_many)
+                        relations[field_name].related_model,
+                        values
+                    )(many=relations[field_name].to_many)
                 )
-                for key, values
-                in [item for each in get_childspecs(serialization_spec) for item in each.items()]
+                for key, field_name, values
+                in [handle_filtered(item) for each in get_childspecs(serialization_spec) for item in each.items()]
             },
         }
     )
@@ -127,22 +146,24 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
     for each in serialization_spec:
         if isinstance(each, dict):
             for key, childspec in each.items():
-                key_path = '__'.join(prefixes + [key])
-
                 if isinstance(childspec, SerializationSpecPlugin):
                     childspec.key = key
                     childspec.request_user = request_user
                     queryset = childspec.modify_queryset(queryset)
 
                 else:
+                    filters, to_attr = None, None
                     if isinstance(childspec, Filtered):
                         filters = childspec.filters
+                        if childspec.field_name:
+                            to_attr = key
+                            key = childspec.field_name
                         childspec = childspec.serialization_spec
-                    else:
-                        filters = None
 
                     relation = relations[key]
                     related_model = relation.related_model
+
+                    key_path = '__'.join(prefixes + [key])
 
                     if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many) and not has_plugin(childspec):
                         # no way to .only() on a select_related field
@@ -162,7 +183,11 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
                         inner_queryset = prefetch_related(request_user, related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
                         if filters:
                             inner_queryset = inner_queryset.filter(filters).distinct()
-                        queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
+                        queryset = queryset.prefetch_related(Prefetch(
+                            key_path,
+                            queryset=inner_queryset,
+                            **({'to_attr': to_attr} if to_attr else {})
+                        ))
         else:
             if each in relations:
                 relation = relations[each]
