@@ -6,6 +6,7 @@ from zen_queries.rest_framework import QueriesDisabledViewMixin
 
 from typing import List, Dict, Union
 from collections import OrderedDict
+import copy
 
 """
 Parse a serialization spec such as:
@@ -200,18 +201,36 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
     return queryset
 
 
-def expand_nested_specs(serialization_spec, request_user):
-    def get_serialization_spec(serialization_spec_plugin):
-        if hasattr(serialization_spec_plugin, 'get_serialization_spec'):
-            serialization_spec_plugin.request_user = request_user
-            return serialization_spec_plugin.get_serialization_spec()
-        return getattr(serialization_spec_plugin, 'serialization_spec', [])
+def get_serialization_spec(view_or_plugin, request_user=None):
+    if hasattr(view_or_plugin, 'get_serialization_spec'):
+        view_or_plugin.request_user = request_user
+        return view_or_plugin.get_serialization_spec()
+    return getattr(view_or_plugin, 'serialization_spec', None)
 
-    return serialization_spec + sum([
-        get_serialization_spec(childspec)
-        for each in serialization_spec if isinstance(each, dict)
-        for key, childspec in each.items() if isinstance(childspec, SerializationSpecPlugin)
-    ], [])
+
+def expand_nested_specs(serialization_spec, request_user):
+    expanded_serialization_spec = []
+
+    for each in serialization_spec:
+        if not isinstance(each, dict):
+            expanded_serialization_spec.append(each)
+        else:
+            expanded_dict = {}
+            for key, childspec in each.items():
+                if isinstance(childspec, SerializationSpecPlugin):
+                    serialization_spec = get_serialization_spec(childspec, request_user)
+                    if serialization_spec is not None:
+                        plugin_copy = copy.deepcopy(childspec)
+                        plugin_copy.serialization_spec = expand_nested_specs(plugin_copy.serialization_spec, request_user)
+                        expanded_serialization_spec += plugin_copy.serialization_spec
+                        expanded_dict[key] = plugin_copy
+                    else:
+                        expanded_dict[key] = childspec
+                else:
+                    expanded_dict[key] = expand_nested_specs(childspec, request_user)
+            expanded_serialization_spec.append(expanded_dict)
+
+    return expanded_serialization_spec
 
 
 class NormalisedSpec:
@@ -259,8 +278,9 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     def get_queryset(self):
         queryset = self.queryset
-        if hasattr(self, 'get_serialization_spec'):
-            self.serialization_spec = self.get_serialization_spec()
+        self.serialization_spec = get_serialization_spec(self)
+        if self.serialization_spec is None:
+            raise Exception('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
         serialization_spec = expand_nested_specs(self.serialization_spec, self.request.user)
         serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
