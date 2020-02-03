@@ -92,7 +92,7 @@ class Student(models.Model):
     year_group = models.IntegerField()
 
     @property
-    def level(self):
+    def key_stage(self):
         if 0 < self.year_group <= 2:
             return 'KS1'
         elif 2 < self.year_group <= 6:
