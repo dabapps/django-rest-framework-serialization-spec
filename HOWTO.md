@@ -109,7 +109,7 @@ class Student(models.Model):
 ### Building bespoke plugins
 A plugin can be built for any purpose. You need to provide two things: how it should modify the underlying queryset, and how the value can be derived from this prefetched data.
 
-Here is an example where we are using `Case...When` to annotate information about relation objects to our queryset and then processing that to find out the total number of completed users.
+Here is an example where we are using `Case...When` to annotate information about related objects to our queryset and then processing that to find out the total number of completed users.
 
 ```python
 from serialization_spec.serialization import SerializationSpecPlugin
@@ -152,7 +152,7 @@ class UsersCompletedCount(SerializationSpecPlugin):
     ]
 ```
 
-Plugins have access to the following instance variables:
+Plugins have access to the following instance variables which may be helpful:
 * `self.key` if they need to know their key in the `serialization_spec`
 * `self.request_user`
 
