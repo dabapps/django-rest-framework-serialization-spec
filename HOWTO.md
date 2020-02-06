@@ -54,6 +54,21 @@ In this case, a page of `Student` instances are retrieved. For each one, `id` an
 
 The library will build a query that will request only the required fields from the database, including use of [prefetch_related()](https://docs.djangoproject.com/en/3.0/ref/models/querysets/#prefetch-related) as appropriate to load related objects. It will also create a serializer to return just these attributes using [ModelSerializer](https://www.django-rest-framework.org/tutorial/1-serialization/#using-modelserializers).
 
+### Serialization Spec format
+
+The `serialization_spec` is a list of fields or relations to be fetched and returned. In the case of relations, you are also able to specify what fields or relations are required in the nested object(s), recursively.
+
+#### Examples
+
+| Spec | Output | Outcome |
+|--|--|--|
+| `['name']` | `{'name': 'Fish'}` | The `name` field |
+| `['id', 'name']` | `{'id': 1, 'name': 'Fish'}` | All requested fields |
+| `['organisation']` | `{'organisation': 99}` | A foreign key's ID |
+| `['organisations']` | `{'organisations': [88, 99]}` | A list of related object IDs |
+| `[{'organisation': ['name']}]` | `{'organisation': {'name': 'My Org'}}` | A nested related object |
+| `[{'organisations': ['name']}]` | `{'organisations': [{'name': 'Org 1'}, {'name': 'Org 2'}]}` | A list of related objects |
+
 ### Plugins
 
 This straightforward mapping of model fields onto the returned structure can get you a long way, and in fact it helps keep your API simple and comprehensible to stay close to the model structure in this way.
