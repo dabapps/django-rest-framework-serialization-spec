@@ -72,7 +72,10 @@ class ClassDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
                 'id',
                 'name'
             ]}
-        ]}
+        ]},
+        {'student_set': [
+            'name',
+        ]},
     ]
 
 
