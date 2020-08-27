@@ -435,11 +435,11 @@ class CollidingFieldsRegressionTestCase(SerializationSpecTestCase):
             'id': uuid('15'),
             'name': 'Student 5',
             "assignments": [
-                {"name": "French A Assignment"},
-                {"name": "Math B Assignment"},
+                uuid('21'),
+                uuid('20'),
             ],
             "classes": [
-                {"name": "French A"},
-                {"name": "Math B"},
+                uuid('5'),
+                uuid('6'),
             ],
         })

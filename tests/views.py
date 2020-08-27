@@ -180,10 +180,6 @@ class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generic
     serialization_spec = [
         'id',
         'name',
-        {'assignments': [
-            'name'
-        ]},
-        {'classes': [
-            'name'
-        ]},
+        'assignments',
+        'classes',
     ]
