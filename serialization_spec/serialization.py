@@ -33,15 +33,13 @@ mixin should implement get_queryset() and get_serializer()
 """
 
 
-class SerializerLambdaField(Field):
-    def __init__(self, impl, **kwargs):
-        self.impl = impl
-        kwargs['source'] = '*'
-        kwargs['read_only'] = True
-        super().__init__(**kwargs)
+class SerializationSpecPluginField(Field):
+    def __init__(self, plugin):
+        self.plugin = plugin
+        super().__init__(source='*', read_only=True)
 
     def to_representation(self, value):
-        return self.impl(value)
+        return self.plugin.get_value(value)
 
 
 class SerializationSpecPlugin:
@@ -53,6 +51,14 @@ class SerializationSpecPlugin:
     # abstract method
     def get_value(self, instance):
         raise NotImplementedError
+
+
+class RelationshipIDsPlugin(SerializationSpecPlugin):
+    def __init__(self, key):
+        self.key = key
+
+    def get_value(self, instance):
+        return [str(each.id) for each in getattr(instance, self.key).all()]
 
 
 class Filtered:
@@ -103,11 +109,6 @@ def handle_filtered(item):
 def make_serializer_class(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
 
-    def make_id_list_getter(key):
-        def id_list_getter(value):
-            return [str(each.id) for each in getattr(value, key).all()]
-        return id_list_getter
-
     return type(
         'MySerializer',
         (ModelSerializer,),
@@ -118,13 +119,13 @@ def make_serializer_class(model, serialization_spec):
                 {'model': model, 'fields': get_fields(serialization_spec)}
             ),
             **{
-                key: SerializerLambdaField(impl=make_id_list_getter(key))
+                key: SerializationSpecPluginField(RelationshipIDsPlugin(key))
                 for key in get_only_fields(model, serialization_spec)
                 if key in relations and relations[key].to_many
             },
             **{
                 key: (
-                    SerializerLambdaField(impl=values.get_value) if isinstance(values, SerializationSpecPlugin)
+                    SerializationSpecPluginField(values) if isinstance(values, SerializationSpecPlugin)
                     else make_serializer_class(
                         relations[field_name].related_model,
                         values
