@@ -103,6 +103,11 @@ def handle_filtered(item):
 def make_serializer_class(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
 
+    def make_id_list_getter(key):
+        def id_list_getter(value):
+            return [str(each.id) for each in getattr(value, key).all()]
+        return id_list_getter
+
     return type(
         'MySerializer',
         (ModelSerializer,),
@@ -113,7 +118,7 @@ def make_serializer_class(model, serialization_spec):
                 {'model': model, 'fields': get_fields(serialization_spec)}
             ),
             **{
-                key: SerializerLambdaField(impl=lambda value: [str(each.id) for each in getattr(value, key).all()])
+                key: SerializerLambdaField(impl=make_id_list_getter(key))
                 for key in get_only_fields(model, serialization_spec)
                 if key in relations and relations[key].to_many
             },
