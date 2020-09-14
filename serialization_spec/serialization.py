@@ -53,9 +53,14 @@ class SerializationSpecPlugin:
         raise NotImplementedError
 
 
-class RelationshipIDsPlugin(SerializationSpecPlugin):
-    def __init__(self, key):
+class ManyToManyIDsPlugin(SerializationSpecPlugin):
+    def __init__(self, related_model, key):
+        self.related_model = related_model
         self.key = key
+
+    def modify_queryset(self, queryset):
+        inner_queryset = self.related_model.objects.only('id')
+        return queryset.prefetch_related(Prefetch(self.key, queryset=inner_queryset))
 
     def get_value(self, instance):
         return [str(each.id) for each in getattr(instance, self.key).all()]
@@ -109,6 +114,7 @@ def handle_filtered(item):
 def make_serializer_class(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
 
+
     return type(
         'MySerializer',
         (ModelSerializer,),
@@ -118,11 +124,6 @@ def make_serializer_class(model, serialization_spec):
                 (object,),
                 {'model': model, 'fields': get_fields(serialization_spec)}
             ),
-            **{
-                key: SerializationSpecPluginField(RelationshipIDsPlugin(key))
-                for key in get_only_fields(model, serialization_spec)
-                if key in relations and relations[key].to_many
-            },
             **{
                 key: (
                     SerializationSpecPluginField(values) if isinstance(values, SerializationSpecPlugin)
@@ -196,14 +197,6 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
                             queryset=inner_queryset,
                             **({'to_attr': to_attr} if to_attr else {})
                         ))
-        else:
-            if each in relations:
-                relation = relations[each]
-                if relation.to_many:
-                    related_model = relation.related_model
-                    key_path = '__'.join(prefixes + [each])
-                    inner_queryset = related_model.objects.only('id')
-                    queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
 
     return queryset
 
@@ -257,6 +250,22 @@ def normalise_spec(serialization_spec):
     return combine(normalised_spec)
 
 
+def expand_many2many_id_fields(model, serialization_spec):
+    # Convert raw M2M fields to ManyToManyIDsPlugin
+    relations = model_meta.get_field_info(model).relations
+
+    for idx, each in enumerate(serialization_spec):
+        if not isinstance(each, dict) and each in relations:
+            relation = relations[each]
+            related_model = relation.related_model
+
+            if isinstance(each, dict):
+                for key, childspec in each.items():
+                    expand_many2many_id_fields(related_model, childspec)
+            elif relation.to_many:
+                serialization_spec[idx] = {each: ManyToManyIDsPlugin(related_model, each)}
+
+
 class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     serialization_spec = None  # type: SerializationSpec
@@ -269,6 +278,7 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
         queryset = self.queryset
         if hasattr(self, 'get_serialization_spec'):
             self.serialization_spec = self.get_serialization_spec()
+        expand_many2many_id_fields(queryset.model, self.serialization_spec)
         serialization_spec = expand_nested_specs(self.serialization_spec, self.request.user)
         serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
