@@ -56,6 +56,7 @@ class SerializationSpecPlugin:
 class ManyToManyIDsPlugin(SerializationSpecPlugin):
     def __init__(self, related_model, key):
         self.related_model = related_model
+        self.to_attr = '_%s_ids' % key
         self.key = key
 
     def modify_queryset(self, queryset):
@@ -251,22 +252,20 @@ def normalise_spec(serialization_spec):
 
 def expand_many2many_id_fields(model, serialization_spec):
     # Convert raw M2M fields to ManyToManyIDsPlugin
-    relations = model_meta.get_field_info(model).relations
+    many_related_models = {
+        field_name: relation.related_model
+        for field_name, relation in model_meta.get_field_info(model).relations.items()
+        if relation.to_many
+    }
 
     for idx, each in enumerate(serialization_spec):
         if not isinstance(each, dict):
-            if each in relations:
-                relation = relations[each]
-                related_model = relation.related_model
-                if relation.to_many:
-                    serialization_spec[idx] = {each: ManyToManyIDsPlugin(related_model, each)}
+            if each in many_related_models:
+                serialization_spec[idx] = {each: ManyToManyIDsPlugin(many_related_models[each], each)}
         else:
             for key, childspec in each.items():
-                if key in relations:
-                    relation = relations[key]
-                    related_model = relation.related_model
-                    if relation.to_many:
-                        expand_many2many_id_fields(related_model, childspec)
+                if key in many_related_models:
+                    expand_many2many_id_fields(many_related_models[key], each[key])
 
 
 class SerializationSpecMixin(QueriesDisabledViewMixin):
