@@ -114,7 +114,6 @@ def handle_filtered(item):
 def make_serializer_class(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
 
-
     return type(
         'MySerializer',
         (ModelSerializer,),
@@ -255,15 +254,19 @@ def expand_many2many_id_fields(model, serialization_spec):
     relations = model_meta.get_field_info(model).relations
 
     for idx, each in enumerate(serialization_spec):
-        if not isinstance(each, dict) and each in relations:
-            relation = relations[each]
-            related_model = relation.related_model
-
-            if isinstance(each, dict):
-                for key, childspec in each.items():
-                    expand_many2many_id_fields(related_model, childspec)
-            elif relation.to_many:
-                serialization_spec[idx] = {each: ManyToManyIDsPlugin(related_model, each)}
+        if not isinstance(each, dict):
+            if each in relations:
+                relation = relations[each]
+                related_model = relation.related_model
+                if relation.to_many:
+                    serialization_spec[idx] = {each: ManyToManyIDsPlugin(related_model, each)}
+        else:
+            for key, childspec in each.items():
+                if key in relations:
+                    relation = relations[key]
+                    related_model = relation.related_model
+                    if relation.to_many:
+                        expand_many2many_id_fields(related_model, childspec)
 
 
 class SerializationSpecMixin(QueriesDisabledViewMixin):
