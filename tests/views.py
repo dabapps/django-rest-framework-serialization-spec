@@ -171,6 +171,19 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
     ]
 
 
+class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
+
+    queryset = Student.objects.all()
+    lookup_field = 'id'
+
+    serialization_spec = [
+        'id',
+        'name',
+        'assignments',
+        'classes',
+    ]
+
+
 class MisconfiguredView(SerializationSpecMixin, generics.ListAPIView):
 
     queryset = Assignment.objects.all()

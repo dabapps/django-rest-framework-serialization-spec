@@ -340,10 +340,30 @@ class ListViewTestCase(SerializationSpecTestCase):
         })
 
 
-class ListViewTestCase(SerializationSpecTestCase):
+class MisconfiguredViewTestCase(SerializationSpecTestCase):
 
-    def test_single_fk_and_reverse_fk(self):
+    def test_view_must_have_serialization_spec(self):
         with self.assertRaises(ImproperlyConfigured) as cm:
-            response = self.client.get(reverse('misconfigured'))
+            self.client.get(reverse('misconfigured'))
 
         self.assertEqual(str(cm.exception), 'SerializationSpecMixin requires serialization_spec or get_serialization_spec')
+
+
+class CollidingFieldsRegressionTestCase(SerializationSpecTestCase):
+
+    def test_multiple_many_to_many_fields_do_not_collide(self):
+        url = reverse('student-with-classes-and-assignments-detail', kwargs={'id': str(self.student.id)})
+        response = self.client.get(url)
+
+        self.assertJsonEqual(response.data, {
+            'id': uuid('15'),
+            'name': 'Student 5',
+            "assignments": [
+                uuid('21'),
+                uuid('20'),
+            ],
+            "classes": [
+                uuid('5'),
+                uuid('6'),
+            ],
+        })
