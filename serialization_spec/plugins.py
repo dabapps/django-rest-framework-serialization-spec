@@ -63,7 +63,7 @@ class Transform(SerializationSpecPlugin):
 class MethodCall(SerializationSpecPlugin):
     def __init__(self, name, required_fields=None):
         self.name = name
-        self.required_fields = set(required_fields) or {}
+        self.required_fields = set(required_fields) if required_fields else set()
 
     def modify_queryset(self, queryset):
         extend_queryset(queryset, self.required_fields)
