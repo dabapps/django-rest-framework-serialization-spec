@@ -170,3 +170,16 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             {'num_students': CountOf('student')},
         ]},
     ]
+
+
+class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
+
+    queryset = Student.objects.all()
+    lookup_field = 'id'
+
+    serialization_spec = [
+        'id',
+        'name',
+        'assignments',
+        'classes',
+    ]
