@@ -33,15 +33,13 @@ mixin should implement get_queryset() and get_serializer()
 """
 
 
-class SerializerLambdaField(Field):
-    def __init__(self, impl, **kwargs):
-        self.impl = impl
-        kwargs['source'] = '*'
-        kwargs['read_only'] = True
-        super().__init__(**kwargs)
+class SerializationSpecPluginField(Field):
+    def __init__(self, plugin):
+        self.plugin = plugin
+        super().__init__(source='*', read_only=True)
 
     def to_representation(self, value):
-        return self.impl(value)
+        return self.plugin.get_value(value)
 
 
 class SerializationSpecPlugin:
@@ -53,6 +51,20 @@ class SerializationSpecPlugin:
     # abstract method
     def get_value(self, instance):
         raise NotImplementedError
+
+
+class ManyToManyIDsPlugin(SerializationSpecPlugin):
+    def __init__(self, related_model, key):
+        self.related_model = related_model
+        self.to_attr = '_%s_ids' % key
+        self.key = key
+
+    def modify_queryset(self, queryset):
+        inner_queryset = self.related_model.objects.only('id')
+        return queryset.prefetch_related(Prefetch(self.key, queryset=inner_queryset))
+
+    def get_value(self, instance):
+        return [str(each.id) for each in getattr(instance, self.key).all()]
 
 
 class Filtered:
@@ -113,13 +125,8 @@ def make_serializer_class(model, serialization_spec):
                 {'model': model, 'fields': get_fields(serialization_spec)}
             ),
             **{
-                key: SerializerLambdaField(impl=lambda value: [str(each.id) for each in getattr(value, key).all()])
-                for key in get_only_fields(model, serialization_spec)
-                if key in relations and relations[key].to_many
-            },
-            **{
                 key: (
-                    SerializerLambdaField(impl=values.get_value) if isinstance(values, SerializationSpecPlugin)
+                    SerializationSpecPluginField(values) if isinstance(values, SerializationSpecPlugin)
                     else make_serializer_class(
                         relations[field_name].related_model,
                         values
@@ -190,14 +197,6 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
                             queryset=inner_queryset,
                             **({'to_attr': to_attr} if to_attr else {})
                         ))
-        else:
-            if each in relations:
-                relation = relations[each]
-                if relation.to_many:
-                    related_model = relation.related_model
-                    key_path = '__'.join(prefixes + [each])
-                    inner_queryset = related_model.objects.only('id')
-                    queryset = queryset.prefetch_related(Prefetch(key_path, queryset=inner_queryset))
 
     return queryset
 
@@ -251,6 +250,24 @@ def normalise_spec(serialization_spec):
     return combine(normalised_spec)
 
 
+def expand_many2many_id_fields(model, serialization_spec):
+    # Convert raw M2M fields to ManyToManyIDsPlugin
+    many_related_models = {
+        field_name: relation.related_model
+        for field_name, relation in model_meta.get_field_info(model).relations.items()
+        if relation.to_many
+    }
+
+    for idx, each in enumerate(serialization_spec):
+        if not isinstance(each, dict):
+            if each in many_related_models:
+                serialization_spec[idx] = {each: ManyToManyIDsPlugin(many_related_models[each], each)}
+        else:
+            for key, childspec in each.items():
+                if key in many_related_models:
+                    expand_many2many_id_fields(many_related_models[key], each[key])
+
+
 class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     serialization_spec = None  # type: SerializationSpec
@@ -263,6 +280,7 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
         queryset = self.queryset
         if hasattr(self, 'get_serialization_spec'):
             self.serialization_spec = self.get_serialization_spec()
+        expand_many2many_id_fields(queryset.model, self.serialization_spec)
         serialization_spec = expand_nested_specs(self.serialization_spec, self.request.user)
         serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))

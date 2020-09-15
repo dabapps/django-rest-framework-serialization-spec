@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from django.db.models import Count
+from django.db.models import Count, Exists as DjangoExists
 from .serialization import SerializationSpecPlugin
 from .utils import extend_queryset
 
@@ -27,9 +27,9 @@ class CountOf(SerializationSpecPluginModel):
     kwargs = {'distinct': True}  # To prevent counts clashing with each other
 
 
-class Exists(CountOf):
-    def get_value(self, instance):
-        return super().get_value(instance) > 0
+class Exists(SerializationSpecPluginModel):
+    name = 'exists'
+    model_function = DjangoExists
 
 
 class Requires(SerializationSpecPlugin):
