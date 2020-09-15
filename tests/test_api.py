@@ -129,7 +129,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             ],
         })
 
-    def test_single_fk_on_fk(self):
+    def test_single_fk_on_fk_and_reverse_m2m(self):
         with CaptureQueriesContext(connection) as capture:
             url = reverse('class-detail', kwargs={'id': str(self.math_class.id)})
             response = self.client.get(url)
@@ -137,7 +137,8 @@ class DetailViewTestCase(SerializationSpecTestCase):
         self.assertJsonEqual(
             sorted(query['sql'] for query in capture.captured_queries),
             [
-                """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id", "tests_school"."id", "tests_school"."created", "tests_school"."modified", "tests_school"."name", "tests_school"."lea_id" FROM "tests_class" INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") INNER JOIN "tests_school" ON ("tests_teacher"."school_id" = "tests_school"."id") WHERE "tests_class"."id" = '00000000-0000-0000-0000-000000000006'::uuid"""
+                """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id", "tests_school"."id", "tests_school"."created", "tests_school"."modified", "tests_school"."name", "tests_school"."lea_id" FROM "tests_class" INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") INNER JOIN "tests_school" ON ("tests_teacher"."school_id" = "tests_school"."id") WHERE "tests_class"."id" = '00000000-0000-0000-0000-000000000006'::uuid""",
+                """SELECT ("tests_student_classes"."class_id") AS "_prefetch_related_val_class_id", "tests_student"."id", "tests_student"."name" FROM "tests_student" INNER JOIN "tests_student_classes" ON ("tests_student"."id" = "tests_student_classes"."student_id") WHERE "tests_student_classes"."class_id" IN ('00000000-0000-0000-0000-000000000006'::uuid)"""
             ]
         )
 
@@ -152,6 +153,9 @@ class DetailViewTestCase(SerializationSpecTestCase):
                     "name": "Kitteh High"
                 },
             },
+            'student_set': [
+                {'name': 'Student 3'}, {'name': 'Student 4'}, {'name': 'Student 5'}, {'name': 'Student 6'}, {'name': 'Student 7'}, {'name': 'Student 8'}, {'name': 'Student 9'},
+            ]
         })
 
     def test_single_fk_on_many_to_many(self):

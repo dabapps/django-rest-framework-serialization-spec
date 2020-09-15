@@ -180,7 +180,9 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
                                 for rel in model._meta.related_objects
                                 if rel.get_accessor_name() == key
                             )
-                            only_fields += ['%s_id' % reverse_fk]
+                            has_reverse_fk = any(field.name == reverse_fk for field in relation.related_model._meta.fields)
+                            if has_reverse_fk:
+                                only_fields += ['%s_id' % reverse_fk]
                         inner_queryset = prefetch_related(request_user, related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
                         if filters:
                             inner_queryset = inner_queryset.filter(filters).distinct()
