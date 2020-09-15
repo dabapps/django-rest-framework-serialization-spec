@@ -1,4 +1,5 @@
 import json
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from rest_framework.test import APIClient
 from django.core.urlresolvers import reverse
@@ -337,3 +338,12 @@ class ListViewTestCase(SerializationSpecTestCase):
                 }
             ]
         })
+
+
+class ListViewTestCase(SerializationSpecTestCase):
+
+    def test_single_fk_and_reverse_fk(self):
+        with self.assertRaises(ImproperlyConfigured) as cm:
+            response = self.client.get(reverse('misconfigured'))
+
+        self.assertEqual(str(cm.exception), 'SerializationSpecMixin requires serialization_spec or get_serialization_spec')

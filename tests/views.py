@@ -26,7 +26,6 @@ class TeacherDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
 class TeacherListView(SerializationSpecMixin, generics.ListAPIView):
 
     queryset = Teacher.objects.order_by('name')
-    lookup_field = 'id'
 
     serialization_spec = [
         'id',
@@ -170,3 +169,10 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             {'num_students': CountOf('student')},
         ]},
     ]
+
+
+class MisconfiguredView(SerializationSpecMixin, generics.ListAPIView):
+
+    queryset = Assignment.objects.all()
+
+    # Missing serialization_spec

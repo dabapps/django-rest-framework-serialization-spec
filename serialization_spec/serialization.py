@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
 from rest_framework.utils import model_meta
 from rest_framework.fields import Field
@@ -282,7 +283,7 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
         queryset = self.queryset
         self.serialization_spec = get_serialization_spec(self)
         if self.serialization_spec is None:
-            raise Exception('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
+            raise ImproperlyConfigured('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
         serialization_spec = expand_nested_specs(self.serialization_spec, self.request.user)
         serialization_spec = normalise_spec(serialization_spec)
         queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
