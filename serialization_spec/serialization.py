@@ -288,6 +288,14 @@ def expand_many2many_id_fields(model, serialization_spec):
                     expand_many2many_id_fields(many_related_models[key], each[key])
 
 
+def prefetch_queryset(queryset, serialization_spec, user=None, use_select_related=False):
+    expand_many2many_id_fields(queryset.model, serialization_spec)
+    serialization_spec = expand_nested_specs(serialization_spec, user)
+    serialization_spec = normalise_spec(serialization_spec)
+    queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
+    return prefetch_related(user, queryset, queryset.model, [], serialization_spec, use_select_related)
+
+
 class SerializationSpecMixin(QueriesDisabledViewMixin):
 
     serialization_spec = None  # type: SerializationSpec
@@ -297,16 +305,11 @@ class SerializationSpecMixin(QueriesDisabledViewMixin):
         return super().get_object()
 
     def get_queryset(self):
-        queryset = self.queryset
         self.serialization_spec = get_serialization_spec(self)
         if self.serialization_spec is None:
             raise ImproperlyConfigured('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
-        expand_many2many_id_fields(queryset.model, self.serialization_spec)
-        serialization_spec = expand_nested_specs(self.serialization_spec, self.request.user)
-        serialization_spec = normalise_spec(serialization_spec)
-        queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
-        queryset = prefetch_related(self.request.user, queryset, queryset.model, [], serialization_spec, getattr(self, 'use_select_related', False))
-        return queryset
+
+        return prefetch_queryset(self.queryset, self.serialization_spec, self.request.user, getattr(self, 'use_select_related', False))
 
     def get_serializer_class(self):
         return make_serializer_class(self.queryset.model, self.serialization_spec)
