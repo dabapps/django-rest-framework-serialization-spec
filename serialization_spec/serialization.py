@@ -142,7 +142,7 @@ def make_serializer_class(model, serialization_spec):
 
 
 def has_plugin(spec):
-    return any(
+    return isinstance(spec, list) and any(
         isinstance(childspec, SerializationSpecPlugin) or has_plugin(childspec)
         for each in spec if isinstance(each, dict)
         for key, childspec in each.items()
@@ -228,6 +228,9 @@ def expand_nested_specs(serialization_spec, request_user):
                         expanded_dict[key] = plugin_copy
                     else:
                         expanded_dict[key] = childspec
+                elif isinstance(childspec, Filtered):
+                    childspec.serialization_spec = expand_nested_specs(childspec.serialization_spec, request_user)
+                    expanded_dict[key] = childspec
                 else:
                     expanded_dict[key] = expand_nested_specs(childspec, request_user)
             expanded_serialization_spec.append(expanded_dict)

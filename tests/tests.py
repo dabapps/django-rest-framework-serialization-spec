@@ -1,9 +1,10 @@
 from .test_api import SerializationSpecTestCase, uuid
 from .models import Teacher, Class
 
+from django.db.models.query import Q
 from rest_framework import generics
 from unittest.mock import MagicMock
-from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin
+from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Filtered
 
 
 class PluginsTestCase(SerializationSpecTestCase):
@@ -170,4 +171,28 @@ class PluginsTestCase(SerializationSpecTestCase):
 
         self.assertJsonEqual(response.data, {
             "school_name_upper": "BRIGHTON & HOVE: KITTEH HIGH"
+        })
+
+    def test_spec_with_filter(self):
+        self.detail_view.serialization_spec = [
+            {'school': [
+                'name',
+                {'teacher_set': Filtered(Q(name__icontains='cat'), [
+                    'name'
+                ])}
+            ]},
+        ]
+
+        with self.assertNumQueries(2):
+            response = self.detail_view.retrieve(self.request)
+
+        self.assertJsonEqual(response.data, {
+            "school": {
+                "name": "Kitteh High",
+                "teacher_set": [
+                    {
+                        "name": "Mr Cat"
+                    },
+                ]
+            }
         })
