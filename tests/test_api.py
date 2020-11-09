@@ -90,7 +90,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
                 'id': uuid('1'),
                 'name': 'Kitteh High',
             },
-            "class_set": [  # reverse FK
+            "classes": [  # reverse FK
                 {
                     "id": uuid("6"),
                     "name": "Math B"
@@ -98,7 +98,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
                 {
                     "id": uuid("5"),
                     "name": "French A"
-                }
+                },
             ],
         })
 

@@ -1,5 +1,5 @@
 from rest_framework import generics
-from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin
+from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Aliased
 from serialization_spec.plugins import CountOf
 from .models import Teacher, Student, Class, Subject, School, Assignment
 
@@ -16,10 +16,10 @@ class TeacherDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             'id',
             'name',
         ]},
-        {'class_set': [
+        {'classes': Aliased('class_set', [
             'id',
-            'name'
-        ]}
+            'name',
+        ])}
     ]
 
 
