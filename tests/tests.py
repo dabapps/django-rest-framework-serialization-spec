@@ -4,7 +4,7 @@ from .models import Teacher, Class
 from django.db.models.query import Q
 from rest_framework import generics
 from unittest.mock import MagicMock
-from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Filtered
+from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Filtered, Aliased
 
 
 class PluginsTestCase(SerializationSpecTestCase):
@@ -193,6 +193,29 @@ class PluginsTestCase(SerializationSpecTestCase):
                     {
                         "name": "Mr Cat"
                     },
+                ]
+            }
+        })
+
+    def test_spec_with_aliased_field(self):
+        self.detail_view.serialization_spec = [
+            {'school': [
+                {'title': Aliased('name')},
+                {'teachers': Aliased('teacher_set', [
+                    'name'
+                ])}
+            ]},
+        ]
+
+        with self.assertNumQueries(2):
+            response = self.detail_view.retrieve(self.request)
+
+        self.assertJsonEqual(response.data, {
+            "school": {
+                "title": "Kitteh High",
+                "teachers": [
+                    {"name": "Ms Dog"},
+                    {"name": "Mr Cat"},
                 ]
             }
         })

@@ -1,7 +1,7 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
 from rest_framework.utils import model_meta
-from rest_framework.fields import Field
+from rest_framework.fields import Field, ReadOnlyField
 from rest_framework.serializers import ModelSerializer
 from zen_queries.rest_framework import QueriesDisabledViewMixin
 
@@ -33,15 +33,6 @@ class ProductVersionDetail(SerializationSpecMixin, generics.RetrieveAPIView):
 mixin should implement get_queryset() and get_serializer()
 
 """
-
-
-class SerializationSpecPluginField(Field):
-    def __init__(self, plugin):
-        self.plugin = plugin
-        super().__init__(source='*', read_only=True)
-
-    def to_representation(self, value):
-        return self.plugin.get_value(value)
 
 
 class SerializationSpecPlugin:
@@ -81,15 +72,29 @@ class Filtered:
 
 
 class Aliased(Filtered):
-    def __init__(self, field_name, serialization_spec):
+    def __init__(self, field_name, serialization_spec=None):
         self.filters = None
         self.field_name = field_name
         self.serialization_spec = serialization_spec
 
 
+class SerializationSpecPluginField(Field):
+    def __init__(self, plugin):
+        self.plugin = plugin
+        super().__init__(source='*', read_only=True)
+
+    def to_representation(self, value):
+        return self.plugin.get_value(value)
+
+
+class AliasedField(ReadOnlyField):
+    def __init__(self, field_name):
+        super().__init__(source=field_name, read_only=True)
+
+
 def get_fields(serialization_spec):
     return sum(
-        [list(x.keys()) if isinstance(x, dict) else [x] for x in serialization_spec],
+        [list(each.keys()) if isinstance(each, dict) else [each] for each in serialization_spec],
         []
     )
 
@@ -129,6 +134,7 @@ def make_serializer_class(model, serialization_spec):
             **{
                 key: (
                     SerializationSpecPluginField(values) if isinstance(values, SerializationSpecPlugin)
+                    else AliasedField(field_name) if values is None
                     else make_serializer_class(
                         relations[field_name].related_model,
                         values
@@ -163,6 +169,9 @@ def prefetch_related(request_user, queryset, model, prefixes, serialization_spec
                 else:
                     filters, to_attr = None, None
                     if isinstance(childspec, Filtered):
+                        if not childspec.serialization_spec:
+                            continue
+
                         filters = childspec.filters
                         if childspec.field_name:
                             to_attr = key
@@ -229,7 +238,8 @@ def expand_nested_specs(serialization_spec, request_user):
                     else:
                         expanded_dict[key] = childspec
                 elif isinstance(childspec, Filtered):
-                    childspec.serialization_spec = expand_nested_specs(childspec.serialization_spec, request_user)
+                    if childspec.serialization_spec:
+                        childspec.serialization_spec = expand_nested_specs(childspec.serialization_spec, request_user)
                     expanded_dict[key] = childspec
                 else:
                     expanded_dict[key] = expand_nested_specs(childspec, request_user)
