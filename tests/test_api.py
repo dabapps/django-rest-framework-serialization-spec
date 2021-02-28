@@ -1,3 +1,4 @@
+import django
 import json
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
@@ -268,15 +269,26 @@ class DetailViewTestCase(SerializationSpecTestCase):
             url = reverse('assignment-detail', kwargs={'id': str(self.assignment.id)})
             response = self.client.get(url)
 
-        self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
-            [
-                """SELECT "tests_assignment"."id", "tests_assignment"."name", "tests_assignment"."clasz_id" FROM "tests_assignment" WHERE "tests_assignment"."id" = '00000000000000000000000000000020'""",
-                """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", COUNT(DISTINCT "tests_student_classes"."student_id") AS "student_count", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_class" LEFT OUTER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") WHERE "tests_class"."id" IN ('00000000000000000000000000000006') GROUP BY "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" ORDER BY "tests_class"."id" ASC""",
-                """SELECT ("tests_assignmentstudent"."assignment_id") AS "_prefetch_related_val_assignment_id", "tests_student"."id", "tests_student"."name", COUNT(DISTINCT "tests_student_classes"."class_id") AS "classes_count" FROM "tests_student" LEFT OUTER JOIN "tests_student_classes" ON ("tests_student"."id" = "tests_student_classes"."student_id") INNER JOIN "tests_assignmentstudent" ON ("tests_student"."id" = "tests_assignmentstudent"."student_id") WHERE "tests_assignmentstudent"."assignment_id" IN ('00000000000000000000000000000020') GROUP BY ("tests_assignmentstudent"."assignment_id"), "tests_student"."id", "tests_student"."name" ORDER BY "tests_student"."id" ASC""",
-                """SELECT ("tests_student_classes"."student_id") AS "_prefetch_related_val_student_id", "tests_class"."id" FROM "tests_class" INNER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") WHERE "tests_student_classes"."student_id" IN ('00000000000000000000000000000015') ORDER BY "tests_class"."id" ASC""",
-            ]
-        )
+        if django.VERSION >= (3, 0, 0):
+            self.assertJsonEqual(
+                sorted(query['sql'] for query in capture.captured_queries),
+                [
+                    """SELECT "tests_assignment"."id", "tests_assignment"."name", "tests_assignment"."clasz_id" FROM "tests_assignment" WHERE "tests_assignment"."id" = '00000000000000000000000000000020' LIMIT 21""",
+                    """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", COUNT(DISTINCT "tests_student_classes"."student_id") AS "student_count", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_class" LEFT OUTER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") WHERE "tests_class"."id" IN ('00000000000000000000000000000006') GROUP BY "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id\"""",
+                    """SELECT ("tests_assignmentstudent"."assignment_id") AS "_prefetch_related_val_assignment_id", "tests_student"."id", "tests_student"."name", COUNT(DISTINCT "tests_student_classes"."class_id") AS "classes_count" FROM "tests_student" LEFT OUTER JOIN "tests_student_classes" ON ("tests_student"."id" = "tests_student_classes"."student_id") INNER JOIN "tests_assignmentstudent" ON ("tests_student"."id" = "tests_assignmentstudent"."student_id") WHERE "tests_assignmentstudent"."assignment_id" IN ('00000000000000000000000000000020') GROUP BY ("tests_assignmentstudent"."assignment_id"), "tests_student"."id", "tests_student"."name\"""",
+                    """SELECT ("tests_student_classes"."student_id") AS "_prefetch_related_val_student_id", "tests_class"."id" FROM "tests_class" INNER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") WHERE "tests_student_classes"."student_id" IN ('00000000000000000000000000000015') ORDER BY "tests_class"."id" ASC""",
+                ]
+            )
+        else:
+            self.assertJsonEqual(
+                sorted(query['sql'] for query in capture.captured_queries),
+                [
+                    """SELECT "tests_assignment"."id", "tests_assignment"."name", "tests_assignment"."clasz_id" FROM "tests_assignment" WHERE "tests_assignment"."id" = '00000000000000000000000000000020'""",
+                    """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", COUNT(DISTINCT "tests_student_classes"."student_id") AS "student_count", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_class" LEFT OUTER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") WHERE "tests_class"."id" IN ('00000000000000000000000000000006') GROUP BY "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" ORDER BY "tests_class"."id" ASC""",
+                    """SELECT ("tests_assignmentstudent"."assignment_id") AS "_prefetch_related_val_assignment_id", "tests_student"."id", "tests_student"."name", COUNT(DISTINCT "tests_student_classes"."class_id") AS "classes_count" FROM "tests_student" LEFT OUTER JOIN "tests_student_classes" ON ("tests_student"."id" = "tests_student_classes"."student_id") INNER JOIN "tests_assignmentstudent" ON ("tests_student"."id" = "tests_assignmentstudent"."student_id") WHERE "tests_assignmentstudent"."assignment_id" IN ('00000000000000000000000000000020') GROUP BY ("tests_assignmentstudent"."assignment_id"), "tests_student"."id", "tests_student"."name" ORDER BY "tests_student"."id" ASC""",
+                    """SELECT ("tests_student_classes"."student_id") AS "_prefetch_related_val_student_id", "tests_class"."id" FROM "tests_class" INNER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") WHERE "tests_student_classes"."student_id" IN ('00000000000000000000000000000015') ORDER BY "tests_class"."id" ASC""",
+                ]
+            )
 
         self.assertJsonEqual(response.data, {
             "id": uuid("20"),
