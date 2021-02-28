@@ -9,6 +9,16 @@ from django.test.utils import CaptureQueriesContext
 from .models import LEA, School, Teacher, Subject, Class, Student, Assignment, AssignmentStudent
 
 
+def django_version_compat(captured_queries):
+    def fix_query(query):
+        if query["sql"].endswith(" LIMIT 21"):
+            query["sql"] = query["sql"].replace(" LIMIT 21", "")
+        if "  LIMIT" in query["sql"]:
+            query["sql"] = query["sql"].replace("  LIMIT", " LIMIT")
+        return query
+    return [fix_query(query) for query in captured_queries]
+
+
 class BaseTestCase(TestCase):
 
     def setUp(self):
@@ -76,7 +86,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             response = self.client.get(url)
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id" FROM "tests_class" WHERE "tests_class"."teacher_id" IN ('00000000000000000000000000000002') ORDER BY "tests_class"."id" ASC""",
                 """SELECT "tests_teacher"."id", "tests_teacher"."name", "tests_teacher"."school_id", "tests_school"."id", "tests_school"."created", "tests_school"."modified", "tests_school"."name", "tests_school"."lea_id" FROM "tests_teacher" INNER JOIN "tests_school" ON ("tests_teacher"."school_id" = "tests_school"."id") WHERE "tests_teacher"."id" = '00000000000000000000000000000002'""",
@@ -108,7 +118,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             response = self.client.get(url)
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_student"."id", "tests_student"."name" FROM "tests_student" WHERE "tests_student"."id" = '00000000000000000000000000000015'""",
                 """SELECT ("tests_student_classes"."student_id") AS "_prefetch_related_val_student_id", "tests_class"."id", "tests_class"."name" FROM "tests_class" INNER JOIN "tests_student_classes" ON ("tests_class"."id" = "tests_student_classes"."class_id") WHERE "tests_student_classes"."student_id" IN ('00000000000000000000000000000015') ORDER BY "tests_class"."id" ASC"""
@@ -136,7 +146,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             response = self.client.get(url)
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id", "tests_school"."id", "tests_school"."created", "tests_school"."modified", "tests_school"."name", "tests_school"."lea_id" FROM "tests_class" INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") INNER JOIN "tests_school" ON ("tests_teacher"."school_id" = "tests_school"."id") WHERE "tests_class"."id" = '00000000000000000000000000000006'""",
                 """SELECT ("tests_student_classes"."class_id") AS "_prefetch_related_val_class_id", "tests_student"."id", "tests_student"."name" FROM "tests_student" INNER JOIN "tests_student_classes" ON ("tests_student"."id" = "tests_student_classes"."student_id") WHERE "tests_student_classes"."class_id" IN ('00000000000000000000000000000006') ORDER BY "tests_student"."id" ASC"""
@@ -165,7 +175,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             response = self.client.get(url)
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_class"."id", "tests_class"."subject_id", "tests_class"."name", "tests_class"."teacher_id", "tests_teacher"."id", "tests_teacher"."created", "tests_teacher"."modified", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_class" INNER JOIN "tests_teacher" ON ("tests_class"."teacher_id" = "tests_teacher"."id") WHERE "tests_class"."subject_id" IN ('00000000000000000000000000000004') ORDER BY "tests_class"."id" ASC""",
                 """SELECT "tests_subject"."id", "tests_subject"."name" FROM "tests_subject" WHERE "tests_subject"."id" = '00000000000000000000000000000004'""",
@@ -193,7 +203,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             response = self.client.get(url)
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_school"."id", "tests_school"."name", "tests_school"."lea_id" FROM "tests_school" WHERE "tests_school"."lea_id" IN ('00000000000000000000000000000000') ORDER BY "tests_school"."id" ASC""",
                 """SELECT "tests_school"."id", "tests_school"."name", "tests_school"."lea_id", "tests_lea"."id", "tests_lea"."created", "tests_lea"."modified", "tests_lea"."name" FROM "tests_school" INNER JOIN "tests_lea" ON ("tests_school"."lea_id" = "tests_lea"."id") WHERE "tests_school"."id" = '00000000000000000000000000000001'""",
@@ -225,7 +235,7 @@ class DetailViewTestCase(SerializationSpecTestCase):
             response = self.client.get(url)
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_assignmentstudent"."id", "tests_assignmentstudent"."is_complete", "tests_assignmentstudent"."assignment_id", "tests_assignmentstudent"."student_id", "tests_assignment"."id", "tests_assignment"."created", "tests_assignment"."modified", "tests_assignment"."name", "tests_assignment"."clasz_id" FROM "tests_assignmentstudent" INNER JOIN "tests_assignment" ON ("tests_assignmentstudent"."assignment_id" = "tests_assignment"."id") WHERE "tests_assignmentstudent"."student_id" IN ('00000000000000000000000000000015') ORDER BY "tests_assignmentstudent"."id" ASC""",
                 """SELECT "tests_student"."id", "tests_student"."name" FROM "tests_student" WHERE "tests_student"."id" = '00000000000000000000000000000015'""",
@@ -295,11 +305,11 @@ class ListViewTestCase(SerializationSpecTestCase):
             response = self.client.get(reverse('teacher-list'))
 
         self.assertJsonEqual(
-            sorted(query['sql'] for query in capture.captured_queries),
+            sorted(query['sql'] for query in django_version_compat(capture.captured_queries)),
             [
                 """SELECT "tests_class"."id", "tests_class"."name", "tests_class"."teacher_id" FROM "tests_class" WHERE "tests_class"."teacher_id" IN ('00000000000000000000000000000002', '00000000000000000000000000000007') ORDER BY "tests_class"."id" ASC""",
                 """SELECT "tests_school"."id", "tests_school"."name" FROM "tests_school" WHERE "tests_school"."id" IN ('00000000000000000000000000000001') ORDER BY "tests_school"."id" ASC""",
-                """SELECT "tests_teacher"."id", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_teacher" ORDER BY "tests_teacher"."name" ASC  LIMIT 2""",
+                """SELECT "tests_teacher"."id", "tests_teacher"."name", "tests_teacher"."school_id" FROM "tests_teacher" ORDER BY "tests_teacher"."name" ASC LIMIT 2""",
                 """SELECT COUNT(*) AS "__count" FROM "tests_teacher\""""
             ]
         )
