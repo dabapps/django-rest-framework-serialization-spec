@@ -105,8 +105,8 @@ class PluginsTestCase(SerializationSpecTestCase):
 
         self.assertJsonEqual(response.data, {
             "name": "Mr Cat",
-            "classes_names": "Math B, French A",
-            "subject_names": "Math, French"
+            "classes_names": "French A, Math B",
+            "subject_names": "French, Math"
         })
 
     def test_reverse_fk_list_ids(self):
@@ -117,7 +117,7 @@ class PluginsTestCase(SerializationSpecTestCase):
         response = self.detail_view.retrieve(self.request)
         self.assertEqual(
             [str(id) for id in response.data['class_set']],
-            [uuid('6'), uuid('5')]
+            [uuid('5'), uuid('6')]
         )
 
     def test_many_to_many_list_ids(self):
@@ -214,8 +214,8 @@ class PluginsTestCase(SerializationSpecTestCase):
             "school": {
                 "title": "Kitteh High",
                 "teachers": [
-                    {"name": "Ms Dog"},
                     {"name": "Mr Cat"},
+                    {"name": "Ms Dog"},
                 ]
             }
         })

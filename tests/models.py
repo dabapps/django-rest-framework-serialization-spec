@@ -9,6 +9,7 @@ class Entity(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ["id"]
 
 
 class LEA(Entity):
