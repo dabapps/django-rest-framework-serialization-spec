@@ -10,6 +10,7 @@ from .models import LEA, School, Teacher, Subject, Class, Student, Assignment, A
 
 
 def django_version_compat(captured_queries):
+    # Handles changes introduced by https://code.djangoproject.com/ticket/6785
     def fix_query(query):
         if query["sql"].endswith(" LIMIT 21"):
             query["sql"] = query["sql"].replace(" LIMIT 21", "")
