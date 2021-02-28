@@ -2,7 +2,7 @@ import json
 from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase
 from rest_framework.test import APIClient
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 

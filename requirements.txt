@@ -1,3 +1,7 @@
-Django==1.11.17
-djangorestframework==3.5.3
-django-zen-queries==1.1.0
+Django==2.2.19
+djangorestframework==3.12.2
+django-zen-queries==2.0.1
+coverage==4.2
+flake8==3.7.5
+mypy==0.812
+unittest-xml-reporting==2.1.0
