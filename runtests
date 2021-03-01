@@ -2,12 +2,6 @@
 
 set -e
 
-export PATH=env/bin:${PATH}
-export DEBUG=true
-export IN_TEST=true
-
-sh -c '! ./manage.py makemigrations --dry-run --exit' # fail if makemigrations hasn't been run
-
 echo "--------------"
 echo "Running python type checking"
 mypy --ignore-missing-imports --follow-imports=skip --strict-optional  --warn-no-return serialization_spec
