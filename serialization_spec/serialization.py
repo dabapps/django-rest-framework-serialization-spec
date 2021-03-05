@@ -1,5 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
+from django.utils.functional import cached_property
 from django_readers import specs, pairs
 from typing import List, Dict, Union
 
@@ -150,11 +151,15 @@ class SerializationSpecMixin:
         spec = preprocess_spec(spec)
         return specs.process(spec)
 
+    @cached_property
+    def reader_pair(self):
+        return self.get_reader_pair()
+
     def get_prepare_function(self):
-        return self.get_reader_pair()[0]
+        return self.reader_pair[0]
 
     def get_project_function(self):
-        return self.get_reader_pair()[1]
+        return self.reader_pair[1]
 
     def get_queryset(self):
         return self.get_prepare_function()(self.queryset)
