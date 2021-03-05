@@ -1,9 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
 from django_readers import specs, pairs
-from rest_framework.utils import model_meta
-from rest_framework.fields import Field, ReadOnlyField
-
 from typing import List, Dict, Union
 
 """
@@ -73,55 +70,6 @@ class Aliased(Filtered):
         self.filters = None
         self.field_name = field_name
         self.serialization_spec = serialization_spec
-
-
-class SerializationSpecPluginField(Field):
-    def __init__(self, plugin):
-        self.plugin = plugin
-        super().__init__(source='*', read_only=True)
-
-    def to_representation(self, value):
-        return self.plugin.get_value(value)
-
-
-class AliasedField(ReadOnlyField):
-    def __init__(self, field_name):
-        super().__init__(source=field_name, read_only=True)
-
-
-def get_fields(serialization_spec):
-    return sum(
-        [list(each.keys()) if isinstance(each, dict) else [each] for each in serialization_spec],
-        []
-    )
-
-
-def get_only_fields(model, serialization_spec):
-    field_info = model_meta.get_field_info(model)
-    fields = set(field_info.fields_and_pk.keys()) | set(field_info.forward_relations.keys())
-    return [
-        field for field in get_fields(serialization_spec)
-        if field in fields
-    ]
-
-
-def get_childspecs(serialization_spec):
-    return [each for each in serialization_spec if isinstance(each, dict)]
-
-
-def handle_filtered(item):
-    key, values = item
-    if isinstance(values, Filtered):
-        return key, values.field_name or key, values.serialization_spec
-    return key, key, values
-
-
-def has_plugin(spec):
-    return isinstance(spec, list) and any(
-        isinstance(childspec, SerializationSpecPlugin) or has_plugin(childspec)
-        for each in spec if isinstance(each, dict)
-        for key, childspec in each.items()
-    )
 
 
 def get_serialization_spec(view_or_plugin, request_user=None):
