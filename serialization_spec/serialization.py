@@ -1,13 +1,10 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
+from django_readers import specs, pairs
 from rest_framework.utils import model_meta
 from rest_framework.fields import Field, ReadOnlyField
-from rest_framework.serializers import ModelSerializer
-from zen_queries.rest_framework import QueriesDisabledViewMixin
 
 from typing import List, Dict, Union
-from collections import OrderedDict
-import copy
 
 """
 Parse a serialization spec such as:
@@ -119,97 +116,12 @@ def handle_filtered(item):
     return key, key, values
 
 
-def make_serializer_class(model, serialization_spec):
-    relations = model_meta.get_field_info(model).relations
-
-    return type(
-        'MySerializer',
-        (ModelSerializer,),
-        {
-            'Meta': type(
-                'Meta',
-                (object,),
-                {'model': model, 'fields': get_fields(serialization_spec)}
-            ),
-            **{
-                key: (
-                    SerializationSpecPluginField(values) if isinstance(values, SerializationSpecPlugin)
-                    else AliasedField(field_name) if values is None
-                    else make_serializer_class(
-                        relations[field_name].related_model,
-                        values
-                    )(many=relations[field_name].to_many)
-                )
-                for key, field_name, values
-                in [handle_filtered(item) for each in get_childspecs(serialization_spec) for item in each.items()]
-            },
-        }
-    )
-
-
 def has_plugin(spec):
     return isinstance(spec, list) and any(
         isinstance(childspec, SerializationSpecPlugin) or has_plugin(childspec)
         for each in spec if isinstance(each, dict)
         for key, childspec in each.items()
     )
-
-
-def prefetch_related(request_user, queryset, model, prefixes, serialization_spec, use_select_related):
-    relations = model_meta.get_field_info(model).relations
-
-    for each in serialization_spec:
-        if isinstance(each, dict):
-            for key, childspec in each.items():
-                if isinstance(childspec, SerializationSpecPlugin):
-                    childspec.key = key
-                    childspec.request_user = request_user
-                    queryset = childspec.modify_queryset(queryset)
-
-                else:
-                    filters, to_attr = None, None
-                    if isinstance(childspec, Filtered):
-                        if not childspec.serialization_spec:
-                            continue
-
-                        filters = childspec.filters
-                        if childspec.field_name:
-                            to_attr = key
-                            key = childspec.field_name
-                        childspec = childspec.serialization_spec
-
-                    relation = relations[key]
-                    related_model = relation.related_model
-
-                    key_path = '__'.join(prefixes + [key])
-
-                    if (relation.model_field and relation.model_field.one_to_one) or (use_select_related and not relation.to_many) and not has_plugin(childspec):
-                        # no way to .only() on a select_related field
-                        queryset = queryset.select_related(key_path)
-                        queryset = prefetch_related(request_user, queryset, related_model, prefixes + [key], childspec, use_select_related)
-                    else:
-                        only_fields = get_only_fields(related_model, childspec)
-                        if relation.reverse and not relation.has_through_model:
-                            # need to include the reverse FK to allow prefetch to stitch results together
-                            # Unfortunately that info is in the model._meta but is not in the RelationInfo tuple
-                            reverse_fk = next(
-                                rel.field.name
-                                for rel in model._meta.related_objects
-                                if rel.get_accessor_name() == key
-                            )
-                            has_reverse_fk = any(field.name == reverse_fk for field in relation.related_model._meta.fields)
-                            if has_reverse_fk:
-                                only_fields += ['%s_id' % reverse_fk]
-                        inner_queryset = prefetch_related(request_user, related_model.objects.only(*only_fields), related_model, [], childspec, use_select_related)
-                        if filters:
-                            inner_queryset = inner_queryset.filter(filters).distinct()
-                        queryset = queryset.prefetch_related(Prefetch(
-                            key_path,
-                            queryset=inner_queryset,
-                            **({'to_attr': to_attr} if to_attr else {})
-                        ))
-
-    return queryset
 
 
 def get_serialization_spec(view_or_plugin, request_user=None):
@@ -219,113 +131,92 @@ def get_serialization_spec(view_or_plugin, request_user=None):
     return getattr(view_or_plugin, 'serialization_spec', None)
 
 
-def expand_nested_specs(serialization_spec, request_user):
-    expanded_serialization_spec = []
+def adapt_plugin_spec(plugin_spec, request_user=None):
+    assert len(plugin_spec) == 1
+    key, plugin = next(iter(plugin_spec.items()))
+    plugin.key = key
+    plugin.request_user = request_user
 
-    for each in serialization_spec:
-        if not isinstance(each, dict):
-            expanded_serialization_spec.append(each)
-        else:
-            expanded_dict = {}
-            for key, childspec in each.items():
-                if isinstance(childspec, SerializationSpecPlugin):
-                    serialization_spec = get_serialization_spec(childspec, request_user)
-                    if serialization_spec is not None:
-                        plugin_copy = copy.deepcopy(childspec)
-                        plugin_copy.serialization_spec = expand_nested_specs(plugin_copy.serialization_spec, request_user)
-                        expanded_serialization_spec += plugin_copy.serialization_spec
-                        expanded_dict[key] = plugin_copy
-                    else:
-                        expanded_dict[key] = childspec
-                elif isinstance(childspec, Filtered):
-                    if childspec.serialization_spec:
-                        childspec.serialization_spec = expand_nested_specs(childspec.serialization_spec, request_user)
-                    expanded_dict[key] = childspec
+    def prepare(queryset):
+        plugin_spec = get_serialization_spec(plugin)
+        if plugin_spec:
+            plugin_prepare, _ = specs.process(preprocess_spec(plugin_spec))
+            return plugin_prepare(queryset)
+        return plugin.modify_queryset(queryset)
+
+    def project(instance):
+        return {key: plugin.get_value(instance)}
+
+    return prepare, project
+
+
+def preprocess_item(item):
+    if isinstance(item, dict):
+        processed_item = []
+        for key, value in item.items():
+            if isinstance(value, list):
+                processed_item.append({key: preprocess_spec(value)})
+            elif isinstance(value, SerializationSpecPlugin):
+                processed_item.append(adapt_plugin_spec({key: value}))
+            elif isinstance(value, Filtered):
+                if value.serialization_spec is None:
+                    spec_to_alias = value.field_name
                 else:
-                    expanded_dict[key] = expand_nested_specs(childspec, request_user)
-            expanded_serialization_spec.append(expanded_dict)
-
-    return expanded_serialization_spec
-
-
-class NormalisedSpec:
-    def __init__(self):
-        self.spec = None
-        self.fields = OrderedDict()
-        self.relations = OrderedDict()
+                    relationship_spec = value.serialization_spec
+                    if value.filters:
+                        relationship_spec.append(pairs.filter(value.filters))
+                    spec_to_alias = {value.field_name or key: relationship_spec}
+                processed_item.append(specs.alias(key, spec_to_alias))
+        return processed_item
+    return [item]
 
 
-def normalise_spec(serialization_spec):
-    def normalise(spec, normalised_spec):
-        if isinstance(spec, SerializationSpecPlugin) or isinstance(spec, Filtered):
-            normalised_spec.spec = spec
-            return
-
-        for each in spec:
-            if isinstance(each, dict):
-                for key, childspec in each.items():
-                    if key not in normalised_spec.relations:
-                        normalised_spec.relations[key] = NormalisedSpec()
-                    normalise(childspec, normalised_spec.relations[key])
-            else:
-                normalised_spec.fields[each] = True
-
-    def combine(normalised_spec):
-        return normalised_spec.spec or (
-            list(normalised_spec.fields.keys()) + ([{
-                key: combine(value)
-                for key, value in normalised_spec.relations.items()
-            }] if normalised_spec.relations else [])
-        )
-
-    normalised_spec = NormalisedSpec()
-    normalise(serialization_spec, normalised_spec)
-    return combine(normalised_spec)
+def preprocess_spec(spec):
+    processed_spec = []
+    for item in spec:
+        processed_spec += preprocess_item(item)
+    return processed_spec
 
 
-def expand_many2many_id_fields(model, serialization_spec):
-    # Convert raw M2M fields to ManyToManyIDsPlugin
-    many_related_models = {
-        field_name: relation.related_model
-        for field_name, relation in model_meta.get_field_info(model).relations.items()
-        if relation.to_many
-    }
+class ProjectionSerializer:
+    def __init__(self, data=None, many=False, projector=None):
+        self.many = many
+        self._data = data
+        self.project = projector
 
-    for idx, each in enumerate(serialization_spec):
-        if not isinstance(each, dict):
-            if each in many_related_models:
-                serialization_spec[idx] = {each: ManyToManyIDsPlugin(many_related_models[each], each)}
-        else:
-            for key, childspec in each.items():
-                if key in many_related_models:
-                    expand_many2many_id_fields(many_related_models[key], each[key])
+    @property
+    def data(self):
+        if self.many:
+            return [self.project(item) for item in self._data]
+        return self.project(self._data)
 
 
-def prefetch_queryset(queryset, serialization_spec, user=None, use_select_related=False):
-    expand_many2many_id_fields(queryset.model, serialization_spec)
-    serialization_spec = expand_nested_specs(serialization_spec, user)
-    serialization_spec = normalise_spec(serialization_spec)
-    queryset = queryset.only(*get_only_fields(queryset.model, serialization_spec))
-    return prefetch_related(user, queryset, queryset.model, [], serialization_spec, use_select_related)
-
-
-class SerializationSpecMixin(QueriesDisabledViewMixin):
+class SerializationSpecMixin:
 
     serialization_spec = None  # type: SerializationSpec
 
-    def get_object(self):
-        self.use_select_related = True
-        return super().get_object()
+    def get_reader_pair(self):
+        spec = get_serialization_spec(self)
+        if spec is None:
+            raise ImproperlyConfigured('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
+        spec = preprocess_spec(spec)
+        return specs.process(spec)
+
+    def get_prepare_function(self):
+        return self.get_reader_pair()[0]
+
+    def get_project_function(self):
+        return self.get_reader_pair()[1]
 
     def get_queryset(self):
-        self.serialization_spec = get_serialization_spec(self)
-        if self.serialization_spec is None:
-            raise ImproperlyConfigured('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
+        return self.get_prepare_function()(self.queryset)
 
-        return prefetch_queryset(self.queryset, self.serialization_spec, self.request.user, getattr(self, 'use_select_related', False))
-
-    def get_serializer_class(self):
-        return make_serializer_class(self.queryset.model, self.serialization_spec)
+    def get_serializer(self, *args, **kwargs):
+        return ProjectionSerializer(
+            *args,
+            **kwargs,
+            projector=self.get_project_function()
+        )
 
 
 """

@@ -154,7 +154,6 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
 
     queryset = Assignment.objects.all()
     lookup_field = 'id'
-
     serialization_spec = [
         'id',
         'name',
@@ -162,7 +161,7 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             'id',
             'name',
             {'classes_count': CountOf('classes')},
-            'classes',
+            {'classes': ["id"]},
         ]},
         {'class_name': ClassName()},
         {'clasz': [
@@ -179,8 +178,8 @@ class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generic
     serialization_spec = [
         'id',
         'name',
-        'assignments',
-        'classes',
+        {'assignments': ["id"]},
+        {'classes': ["id"]},
     ]
 
 

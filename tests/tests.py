@@ -65,7 +65,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             {'school_name_upper': SchoolNameUpper()},
         ]
 
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(2):
             response = self.detail_view.retrieve(self.request)
 
         self.assertJsonEqual(response.data, {
@@ -111,12 +111,12 @@ class PluginsTestCase(SerializationSpecTestCase):
 
     def test_reverse_fk_list_ids(self):
         self.detail_view.serialization_spec = [
-            'class_set'
+            {'class_set': ['id']}
         ]
 
         response = self.detail_view.retrieve(self.request)
         self.assertEqual(
-            [str(id) for id in response.data['class_set']],
+            [str(item['id']) for item in response.data['class_set']],
             [uuid('5'), uuid('6')]
         )
 
@@ -125,7 +125,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             queryset = Class.objects.all()
 
             serialization_spec = [
-                'student_set'
+                {'student_set': ['id']}
             ]
 
         detail_view = ClassDetailView(
@@ -136,7 +136,7 @@ class PluginsTestCase(SerializationSpecTestCase):
 
         response = detail_view.retrieve(self.request)
         self.assertEqual(
-            [str(id) for id in response.data['student_set']],
+            [str(item['id']) for item in response.data['student_set']],
             [uuid('10'), uuid('11'), uuid('12'), uuid('13'), uuid('14'), uuid('15'), uuid('16')]
         )
 
@@ -166,7 +166,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             {'school_name_upper': SchoolNameUpper()},
         ]
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = self.detail_view.retrieve(self.request)
 
         self.assertJsonEqual(response.data, {
@@ -183,7 +183,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             ]},
         ]
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = self.detail_view.retrieve(self.request)
 
         self.assertJsonEqual(response.data, {
@@ -207,7 +207,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             ]},
         ]
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = self.detail_view.retrieve(self.request)
 
         self.assertJsonEqual(response.data, {
