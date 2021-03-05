@@ -89,7 +89,7 @@ def adapt_plugin_spec(plugin_spec, request_user=None):
     def prepare(queryset):
         plugin_spec = get_serialization_spec(plugin)
         if plugin_spec:
-            plugin_prepare, _ = specs.process(preprocess_spec(plugin_spec))
+            plugin_prepare, _ = specs.process(preprocess_spec(plugin_spec, request_user=request_user))
             return plugin_prepare(queryset)
         return plugin.modify_queryset(queryset)
 
@@ -99,14 +99,14 @@ def adapt_plugin_spec(plugin_spec, request_user=None):
     return prepare, project
 
 
-def preprocess_item(item):
+def preprocess_item(item, request_user=None):
     if isinstance(item, dict):
         processed_item = []
         for key, value in item.items():
             if isinstance(value, list):
                 processed_item.append({key: preprocess_spec(value)})
             elif isinstance(value, SerializationSpecPlugin):
-                processed_item.append(adapt_plugin_spec({key: value}))
+                processed_item.append(adapt_plugin_spec({key: value}, request_user=request_user))
             elif isinstance(value, Filtered):
                 if value.serialization_spec is None:
                     spec_to_alias = value.field_name
@@ -120,10 +120,10 @@ def preprocess_item(item):
     return [item]
 
 
-def preprocess_spec(spec):
+def preprocess_spec(spec, request_user=None):
     processed_spec = []
     for item in spec:
-        processed_spec += preprocess_item(item)
+        processed_spec += preprocess_item(item, request_user=request_user)
     return processed_spec
 
 
@@ -148,7 +148,7 @@ class SerializationSpecMixin:
         spec = get_serialization_spec(self)
         if spec is None:
             raise ImproperlyConfigured('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
-        spec = preprocess_spec(spec)
+        spec = preprocess_spec(spec, request_user=self.request.user)
         return specs.process(spec)
 
     @cached_property
