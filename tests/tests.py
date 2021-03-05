@@ -2,6 +2,7 @@ from .test_api import SerializationSpecTestCase, uuid
 from .models import Teacher, Class
 
 from django.db.models.query import Q
+from django_readers.pairs import pk_list
 from rest_framework import generics
 from unittest.mock import MagicMock
 from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Filtered, Aliased
@@ -111,12 +112,12 @@ class PluginsTestCase(SerializationSpecTestCase):
 
     def test_reverse_fk_list_ids(self):
         self.detail_view.serialization_spec = [
-            {'class_set': ['id']}
+            pk_list('class_set')
         ]
 
         response = self.detail_view.retrieve(self.request)
         self.assertEqual(
-            [str(item['id']) for item in response.data['class_set']],
+            [str(id) for id in response.data['class_set']],
             [uuid('5'), uuid('6')]
         )
 
@@ -125,7 +126,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             queryset = Class.objects.all()
 
             serialization_spec = [
-                {'student_set': ['id']}
+                pk_list('student_set')
             ]
 
         detail_view = ClassDetailView(
@@ -136,7 +137,7 @@ class PluginsTestCase(SerializationSpecTestCase):
 
         response = detail_view.retrieve(self.request)
         self.assertEqual(
-            [str(item['id']) for item in response.data['student_set']],
+            [str(id) for id in response.data['student_set']],
             [uuid('10'), uuid('11'), uuid('12'), uuid('13'), uuid('14'), uuid('15'), uuid('16')]
         )
 

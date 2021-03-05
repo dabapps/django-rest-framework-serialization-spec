@@ -308,8 +308,8 @@ class DetailViewTestCase(SerializationSpecTestCase):
                     "name": "Student 5",
                     "classes_count": 2,
                     "classes": [
-                        {"id": uuid("5")},
-                        {"id": uuid("6")},
+                        uuid("5"),
+                        uuid("6"),
                     ]
                 }
             ],
@@ -391,11 +391,11 @@ class CollidingFieldsRegressionTestCase(SerializationSpecTestCase):
             'id': uuid('15'),
             'name': 'Student 5',
             "assignments": [
-                {"id": uuid('20')},
-                {"id": uuid('21')},
+                uuid('20'),
+                uuid('21'),
             ],
             "classes": [
-                {"id": uuid('5')},
-                {"id": uuid('6')},
+                uuid('5'),
+                uuid('6'),
             ],
         })

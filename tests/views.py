@@ -1,3 +1,4 @@
+from django_readers.pairs import pk_list
 from rest_framework import generics
 from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Aliased
 from serialization_spec.plugins import CountOf
@@ -161,7 +162,7 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             'id',
             'name',
             {'classes_count': CountOf('classes')},
-            {'classes': ["id"]},
+            pk_list('classes'),
         ]},
         {'class_name': ClassName()},
         {'clasz': [
@@ -178,8 +179,8 @@ class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generic
     serialization_spec = [
         'id',
         'name',
-        {'assignments': ["id"]},
-        {'classes': ["id"]},
+        pk_list('assignments'),
+        pk_list('classes'),
     ]
 
 
