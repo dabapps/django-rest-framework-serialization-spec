@@ -104,14 +104,14 @@ def preprocess_item(item, request_user=None):
         processed_item = []
         for key, value in item.items():
             if isinstance(value, list):
-                processed_item.append({key: preprocess_spec(value)})
+                processed_item.append({key: preprocess_spec(value, request_user=request_user)})
             elif isinstance(value, SerializationSpecPlugin):
                 processed_item.append(adapt_plugin_spec({key: value}, request_user=request_user))
             elif isinstance(value, Filtered):
                 if value.serialization_spec is None:
                     spec_to_alias = value.field_name
                 else:
-                    relationship_spec = value.serialization_spec
+                    relationship_spec = preprocess_spec(value.serialization_spec, request_user=request_user)
                     if value.filters:
                         relationship_spec.append(pairs.filter(value.filters))
                     spec_to_alias = {value.field_name or key: relationship_spec}
