@@ -2,7 +2,7 @@ from .test_api import SerializationSpecTestCase, uuid
 from .models import Teacher, Class
 
 from django.db.models.query import Q
-from django_readers.pairs import pk_list
+from django_readers import pairs, specs
 from rest_framework import generics
 from unittest.mock import MagicMock
 from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Filtered, Aliased
@@ -76,25 +76,25 @@ class PluginsTestCase(SerializationSpecTestCase):
     def test_merge_specs(self):
         class ClassNames(SerializationSpecPlugin):
             serialization_spec = [
-                {'class_set': [
+                specs.auto_relationship('class_set', [
                     'name',
-                ]}
+                ], to_attr="class_set_for_name")
             ]
 
             def get_value(self, instance):
-                return ', '.join(each.name for each in instance.class_set.all())
+                return ', '.join(each.name for each in instance.class_set_for_name)
 
         class SubjectNames(SerializationSpecPlugin):
             serialization_spec = [
-                {'class_set': [
+                specs.auto_relationship('class_set', [
                     {'subject': [
                         'name',
                     ]}
-                ]}
+                ], to_attr="class_set_for_subject_name")
             ]
 
             def get_value(self, instance):
-                return ', '.join(each.subject.name for each in instance.class_set.all())
+                return ', '.join(each.subject.name for each in instance.class_set_for_subject_name)
 
         self.detail_view.serialization_spec = [
             'name',
@@ -112,7 +112,7 @@ class PluginsTestCase(SerializationSpecTestCase):
 
     def test_reverse_fk_list_ids(self):
         self.detail_view.serialization_spec = [
-            pk_list('class_set')
+            pairs.pk_list('class_set')
         ]
 
         response = self.detail_view.retrieve(self.request)
@@ -126,7 +126,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             queryset = Class.objects.all()
 
             serialization_spec = [
-                pk_list('student_set')
+                pairs.pk_list('student_set')
             ]
 
         detail_view = ClassDetailView(
