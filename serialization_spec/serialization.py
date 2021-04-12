@@ -109,13 +109,14 @@ def preprocess_item(item, request_user=None):
                 processed_item.append(adapt_plugin_spec({key: value}, request_user=request_user))
             elif isinstance(value, Filtered):
                 if value.serialization_spec is None:
-                    spec_to_alias = value.field_name
+                    spec = specs.alias(key, value.field_name)
                 else:
                     relationship_spec = preprocess_spec(value.serialization_spec, request_user=request_user)
                     if value.filters:
                         relationship_spec.append(pairs.filter(value.filters))
-                    spec_to_alias = {value.field_name or key: relationship_spec}
-                processed_item.append(specs.alias(key, spec_to_alias))
+                    to_attr = key if value.field_name and value.field_name != key else None
+                    spec = specs.auto_relationship(value.field_name or key, relationship_spec, to_attr=to_attr)
+                processed_item.append(spec)
         return processed_item
     return [item]
 
