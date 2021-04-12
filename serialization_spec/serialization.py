@@ -1,7 +1,7 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
 from django.utils.functional import cached_property
-from django_readers import specs, pairs
+from django_readers import specs, pairs, qs
 from typing import List, Dict, Union
 
 """
@@ -113,7 +113,14 @@ def preprocess_item(item, request_user=None):
                 else:
                     relationship_spec = preprocess_spec(value.serialization_spec, request_user=request_user)
                     if value.filters:
-                        relationship_spec.append(pairs.filter(value.filters))
+                        relationship_spec.append(
+                            pairs.prepare_only(
+                                qs.pipe(
+                                    qs.filter(value.filters),
+                                    qs.distinct()
+                                )
+                            )
+                        )
                     to_attr = key if value.field_name and value.field_name != key else None
                     spec = specs.auto_relationship(value.field_name or key, relationship_spec, to_attr=to_attr)
                 processed_item.append(spec)
