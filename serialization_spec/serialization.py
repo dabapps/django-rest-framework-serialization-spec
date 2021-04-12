@@ -170,6 +170,7 @@ class SerializationSpecMixin:
         return self.reader_pair[1]
 
     def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
         return self.get_prepare_function()(queryset)
 
     def get_serializer(self, *args, **kwargs):
