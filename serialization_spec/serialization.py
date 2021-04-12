@@ -162,8 +162,8 @@ class SerializationSpecMixin:
     def get_project_function(self):
         return self.reader_pair[1]
 
-    def get_queryset(self):
-        return self.get_prepare_function()(self.queryset)
+    def filter_queryset(self, queryset):
+        return self.get_prepare_function()(queryset)
 
     def get_serializer(self, *args, **kwargs):
         return ProjectionSerializer(
