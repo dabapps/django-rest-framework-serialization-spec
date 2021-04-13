@@ -1,6 +1,6 @@
 Django==2.2.19
 djangorestframework==3.12.2
-django-readers>=0.0.2
+django-readers>=0.0.3
 django-zen-queries==2.0.1
 coverage==4.2
 flake8==3.7.5
