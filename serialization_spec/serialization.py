@@ -86,12 +86,11 @@ def adapt_plugin_spec(plugin_spec, request_user=None):
     plugin.key = key
     plugin.request_user = request_user
 
-    def prepare(queryset):
-        plugin_spec = get_serialization_spec(plugin)
-        if plugin_spec:
-            plugin_prepare, _ = specs.process(preprocess_spec(plugin_spec, request_user=request_user))
-            return plugin_prepare(queryset)
-        return plugin.modify_queryset(queryset)
+    plugin_spec = get_serialization_spec(plugin)
+    if plugin_spec:
+        prepare, _ = specs.process(preprocess_spec(plugin_spec, request_user=request_user))
+    else:
+        prepare = plugin.modify_queryset
 
     def project(instance):
         return {key: plugin.get_value(instance)}
