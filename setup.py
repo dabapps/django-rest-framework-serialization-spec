@@ -20,7 +20,7 @@ install_requires = [
     'Django>=1.11',
     'djangorestframework>=3.5.3',
     'django-zen-queries>=1.0.0',
-    'django-readers>=0.0.3',
+    'django-readers>=0.0.4',
 ]
 
 def get_version(package):
