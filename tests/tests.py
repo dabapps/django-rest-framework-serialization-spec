@@ -76,7 +76,7 @@ class PluginsTestCase(SerializationSpecTestCase):
     def test_merge_specs(self):
         class ClassNames(SerializationSpecPlugin):
             serialization_spec = [
-                specs.auto_relationship('class_set', [
+                specs.relationship('class_set', [
                     'name',
                 ], to_attr="class_set_for_name")
             ]
@@ -86,7 +86,7 @@ class PluginsTestCase(SerializationSpecTestCase):
 
         class SubjectNames(SerializationSpecPlugin):
             serialization_spec = [
-                specs.auto_relationship('class_set', [
+                specs.relationship('class_set', [
                     {'subject': [
                         'name',
                     ]}

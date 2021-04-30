@@ -139,7 +139,7 @@ class StudentWithAssignmentsDetailView(SerializationSpecMixin, generics.Retrieve
 
 class ClassName(SerializationSpecPlugin):
     serialization_spec = [
-        specs.auto_relationship('clasz', [
+        specs.relationship('clasz', [
             'name',
             {'teacher': [
                 'name'

@@ -121,7 +121,7 @@ def preprocess_item(item, request_user=None):
                             )
                         )
                     to_attr = key if value.field_name and value.field_name != key else None
-                    spec = specs.auto_relationship(value.field_name or key, relationship_spec, to_attr=to_attr)
+                    spec = specs.relationship(value.field_name or key, relationship_spec, to_attr=to_attr)
                 processed_item.append(spec)
         return processed_item
     return [item]
