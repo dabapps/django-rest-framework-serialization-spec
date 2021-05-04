@@ -135,10 +135,10 @@ def preprocess_spec(spec, request_user=None):
 
 
 class ProjectionSerializer:
-    def __init__(self, data=None, many=False, projector=None):
+    def __init__(self, data=None, many=False, context=None):
         self.many = many
         self._data = data
-        self.project = projector
+        self.project = context["projector"]
 
     @property
     def data(self):
@@ -172,12 +172,14 @@ class SerializationSpecMixin:
         queryset = super().filter_queryset(queryset)
         return self.get_prepare_function()(queryset)
 
-    def get_serializer(self, *args, **kwargs):
-        return ProjectionSerializer(
-            *args,
-            **kwargs,
-            projector=self.get_project_function()
-        )
+    def get_serializer_class(self):
+        return ProjectionSerializer
+
+    def get_serializer_context(self):
+        return {
+            "projector": self.get_project_function(),
+            **super().get_serializer_context(),
+        }
 
 
 """
