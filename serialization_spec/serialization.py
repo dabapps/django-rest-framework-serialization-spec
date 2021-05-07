@@ -138,13 +138,14 @@ class ProjectionSerializer:
     def __init__(self, data=None, many=False, context=None):
         self.many = many
         self._data = data
-        self.project = context["projector"]
+        self.context = context
 
     @property
     def data(self):
+        project = self.context["view"].project
         if self.many:
-            return [self.project(item) for item in self._data]
-        return self.project(self._data)
+            return [project(item) for item in self._data]
+        return project(self._data)
 
 
 class SerializationSpecMixin:
@@ -162,24 +163,20 @@ class SerializationSpecMixin:
     def reader_pair(self):
         return self.get_reader_pair()
 
-    def get_prepare_function(self):
+    @property
+    def prepare(self):
         return self.reader_pair[0]
 
-    def get_project_function(self):
+    @property
+    def project(self):
         return self.reader_pair[1]
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        return self.get_prepare_function()(queryset)
+        return self.prepare(queryset)
 
     def get_serializer_class(self):
         return ProjectionSerializer
-
-    def get_serializer_context(self):
-        return {
-            "projector": self.get_project_function(),
-            **super().get_serializer_context(),
-        }
 
 
 """
