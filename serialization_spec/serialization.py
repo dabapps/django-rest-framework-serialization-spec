@@ -4,31 +4,6 @@ from django.utils.functional import cached_property
 from django_readers import specs, pairs, qs
 from typing import List, Dict, Union
 
-"""
-Parse a serialization spec such as:
-
-class ProductVersionDetail(SerializationSpecMixin, generics.RetrieveAPIView):
-
-    queryset = ProductVersion.objects.all()
-    serialization_spec = [
-        'id',
-        {'product': [
-            'id',
-            'name'
-        ]},
-        {'report_templates': [
-            'id',
-            'name'
-        ]}
-    ]
-
-1. fetch the data required to populate this
-2. output it
-
-mixin should implement get_queryset() and get_serializer()
-
-"""
-
 
 class SerializationSpecPlugin:
     """ These methods can access self.key to get the key """
