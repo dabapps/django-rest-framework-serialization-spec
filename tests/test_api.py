@@ -380,7 +380,7 @@ class MisconfiguredViewTestCase(SerializationSpecTestCase):
         with self.assertRaises(ImproperlyConfigured) as cm:
             self.client.get(reverse('misconfigured'))
 
-        self.assertEqual(str(cm.exception), 'SerializationSpecMixin requires serialization_spec or get_serialization_spec')
+        self.assertEqual(str(cm.exception), 'SpecMixin requires spec or get_spec')
 
 
 class CollidingFieldsRegressionTestCase(SerializationSpecTestCase):

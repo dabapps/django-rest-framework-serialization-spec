@@ -1,7 +1,5 @@
-from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Prefetch
-from django.utils.functional import cached_property
-from django_readers import specs, pairs, qs
+from django_readers import specs, pairs, qs, rest_framework
 from typing import List, Dict, Union
 
 
@@ -109,49 +107,10 @@ def preprocess_spec(spec, request_user=None):
     return processed_spec
 
 
-class ProjectionSerializer:
-    def __init__(self, data=None, many=False, context=None):
-        self.many = many
-        self._data = data
-        self.context = context
-
-    @property
-    def data(self):
-        project = self.context["view"].project
-        if self.many:
-            return [project(item) for item in self._data]
-        return project(self._data)
-
-
-class SerializationSpecMixin:
-
-    serialization_spec = None  # type: SerializationSpec
-
-    def get_reader_pair(self):
-        spec = get_serialization_spec(self)
-        if spec is None:
-            raise ImproperlyConfigured('SerializationSpecMixin requires serialization_spec or get_serialization_spec')
-        spec = preprocess_spec(spec, request_user=self.request.user)
-        return specs.process(spec)
-
-    @cached_property
-    def reader_pair(self):
-        return self.get_reader_pair()
-
-    @property
-    def prepare(self):
-        return self.reader_pair[0]
-
-    @property
-    def project(self):
-        return self.reader_pair[1]
-
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
-        return self.prepare(queryset)
-
-    def get_serializer_class(self):
-        return ProjectionSerializer
+class SerializationSpecMixin(rest_framework.SpecMixin):
+    def get_spec(self):
+        spec = get_serialization_spec(self) or super().get_spec()
+        return preprocess_spec(spec)
 
 
 """
