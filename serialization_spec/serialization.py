@@ -1,6 +1,5 @@
 from django.db.models import Prefetch
 from django_readers import specs, pairs, qs, rest_framework
-from typing import List, Dict, Union
 
 
 class SerializationSpecPlugin:
@@ -111,23 +110,3 @@ class SerializationSpecMixin(rest_framework.SpecMixin):
     def get_spec(self):
         spec = get_serialization_spec(self) or super().get_spec()
         return preprocess_spec(spec)
-
-
-"""
-serialization_spec type should be
-
-    SerializationSpec = List[Union[str, Dict[str, Union[SerializationSpecPlugin, 'SerializationSpec']]]]
-
-But recursive types are not yet implemented :(
-So we specify to an (arbitrary) depth of 5
-"""
-SerializationSpec = List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
-    List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
-        List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
-            List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
-                List[Union[str, Dict[str, Union[Filtered, SerializationSpecPlugin,
-                    List]]]]
-            ]]]]
-        ]]]]
-    ]]]]
-]]]]
