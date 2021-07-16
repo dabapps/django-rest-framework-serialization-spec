@@ -112,7 +112,7 @@ class PluginsTestCase(SerializationSpecTestCase):
 
     def test_reverse_fk_list_ids(self):
         self.detail_view.serialization_spec = [
-            pairs.pk_list('class_set')
+            {"class_set": pairs.pk_list('class_set')}
         ]
 
         response = self.detail_view.retrieve(self.request)
@@ -126,7 +126,7 @@ class PluginsTestCase(SerializationSpecTestCase):
             queryset = Class.objects.all()
 
             serialization_spec = [
-                pairs.pk_list('student_set')
+                {"student_set": pairs.pk_list('student_set')}
             ]
 
         detail_view = ClassDetailView(
@@ -186,7 +186,6 @@ class PluginsTestCase(SerializationSpecTestCase):
 
         with self.assertNumQueries(3):
             response = self.detail_view.retrieve(self.request)
-
         self.assertJsonEqual(response.data, {
             "school": {
                 "name": "Kitteh High",

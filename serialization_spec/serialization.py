@@ -64,10 +64,7 @@ def adapt_plugin_spec(plugin_spec, request_user=None):
     else:
         prepare = plugin.modify_queryset
 
-    def project(instance):
-        return {key: plugin.get_value(instance)}
-
-    return prepare, project
+    return prepare, plugin.get_value
 
 
 def preprocess_item(item, request_user=None):
@@ -77,10 +74,10 @@ def preprocess_item(item, request_user=None):
             if isinstance(value, list):
                 processed_item.append({key: preprocess_spec(value, request_user=request_user)})
             elif isinstance(value, SerializationSpecPlugin):
-                processed_item.append(adapt_plugin_spec({key: value}, request_user=request_user))
+                processed_item.append({key: adapt_plugin_spec({key: value}, request_user=request_user)})
             elif isinstance(value, Filtered):
                 if value.serialization_spec is None:
-                    spec = specs.alias(key, value.field_name)
+                    spec = {key: value.field_name}
                 else:
                     relationship_spec = preprocess_spec(value.serialization_spec, request_user=request_user)
                     if value.filters:
@@ -95,6 +92,8 @@ def preprocess_item(item, request_user=None):
                     to_attr = key if value.field_name and value.field_name != key else None
                     spec = specs.relationship(value.field_name or key, relationship_spec, to_attr=to_attr)
                 processed_item.append(spec)
+            else:
+                processed_item.append({key: value})
         return processed_item
     return [item]
 

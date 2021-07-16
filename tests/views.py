@@ -139,12 +139,12 @@ class StudentWithAssignmentsDetailView(SerializationSpecMixin, generics.Retrieve
 
 class ClassName(SerializationSpecPlugin):
     serialization_spec = [
-        specs.relationship('clasz', [
+        {'class_for_class_name': specs.relationship('clasz', [
             'name',
             {'teacher': [
                 'name'
             ]},
-        ], to_attr="class_for_class_name"),
+        ], to_attr="class_for_class_name")},
     ]
 
     def get_value(self, instance):
@@ -162,7 +162,7 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             'id',
             'name',
             {'classes_count': CountOf('classes')},
-            pairs.pk_list('classes'),
+            {'classes': pairs.pk_list('classes')},
         ]},
         {'class_name': ClassName()},
         {'clasz': [
@@ -179,8 +179,8 @@ class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generic
     serialization_spec = [
         'id',
         'name',
-        pairs.pk_list('assignments'),
-        pairs.pk_list('classes'),
+        {'assignments': pairs.pk_list('assignments')},
+        {'classes': pairs.pk_list('classes')},
     ]
 
 
