@@ -1,3 +1,4 @@
+from django_readers import pairs, specs
 from rest_framework import generics
 from serialization_spec.serialization import SerializationSpecMixin, SerializationSpecPlugin, Aliased
 from serialization_spec.plugins import CountOf
@@ -138,23 +139,22 @@ class StudentWithAssignmentsDetailView(SerializationSpecMixin, generics.Retrieve
 
 class ClassName(SerializationSpecPlugin):
     serialization_spec = [
-        {'clasz': [
+        {'class_for_class_name': specs.relationship('clasz', [
             'name',
             {'teacher': [
                 'name'
             ]},
-        ]},
+        ], to_attr="class_for_class_name")},
     ]
 
     def get_value(self, instance):
-        return '%s - %s' % (instance.clasz.name, instance.clasz.teacher.name)
+        return '%s - %s' % (instance.class_for_class_name.name, instance.class_for_class_name.teacher.name)
 
 
 class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
 
     queryset = Assignment.objects.all()
     lookup_field = 'id'
-
     serialization_spec = [
         'id',
         'name',
@@ -162,7 +162,7 @@ class AssignmentDetailView(SerializationSpecMixin, generics.RetrieveAPIView):
             'id',
             'name',
             {'classes_count': CountOf('classes')},
-            'classes',
+            {'classes': pairs.pk_list('classes')},
         ]},
         {'class_name': ClassName()},
         {'clasz': [
@@ -179,8 +179,8 @@ class StudentWithClassesAndAssignmentsDetailView(SerializationSpecMixin, generic
     serialization_spec = [
         'id',
         'name',
-        'assignments',
-        'classes',
+        {'assignments': pairs.pk_list('assignments')},
+        {'classes': pairs.pk_list('classes')},
     ]
 
 
