@@ -108,4 +108,4 @@ def preprocess_spec(spec, request_user=None):
 class SerializationSpecMixin(rest_framework.SpecMixin):
     def get_spec(self):
         spec = get_serialization_spec(self) or super().get_spec()
-        return preprocess_spec(spec)
+        return preprocess_spec(spec, request_user=self.request.user)
